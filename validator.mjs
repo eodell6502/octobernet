@@ -1,17 +1,5 @@
-/*
-* generic argument validator
-    * session subsystem
-*/
+import * as $P from "./primitives.mjs";
 
-var mdb;
-var cfg;
-
-//==============================================================================
-
-function inject(_cfg, _mdb) {
-    cfg = _cfg;
-    mdb = _mdb;
-}
 
 
 //==============================================================================
@@ -32,17 +20,6 @@ async function prepArgs(args, spec, loginRequired = true) {
 }
 
 
-//==============================================================================
-
-async function saveSession(user) {
-    if(user.session._dirty == false)
-        return;
-    delete user.session._dirty;
-    var q = "UPDATE sessions SET session = ? WHERE userId = ?";
-    var sessionJSON = JSON.stringify(user.session);
-    await mdb.exec(q, [sessionJSON, user.id]);
-    return;
-}
 
 
 //==============================================================================
@@ -61,11 +38,11 @@ async function loadUser(loginToken) {
     } else {
         try {
             user.session = JSON.parse(user.session);
+            user.session._dirty = false;
         } catch(e) {
             user.session = { };
-        }
+        }   user.session._dirty = true;
     }
-    user.session._dirty = false;
 
     var q = "UPDATE users SET loginExpires = DATE_ADD(NOW(), 'INTERVAL ? MINUTE') "
         + "WHERE id = ?";
