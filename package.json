@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "gadgetry-api": "^1.0.3",
+    "mysql2": "^3.0.1"
+  },
+  "name": "octobernet",
+  "description": "## What is OctoberNet?",
+  "version": "0.0.1",
+  "main": "octobernet.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eodell6502/octobernet.git"
+  },
+  "author": "Eric O'Dell",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eodell6502/octobernet/issues"
+  },
+  "homepage": "https://github.com/eodell6502/octobernet#readme"
+}
