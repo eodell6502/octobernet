@@ -12,11 +12,6 @@ class MDBWrapper {
         this.pwd  = pwd;
         this.db   = db;
         this.port = port;
-
-        this.insertId     = null;
-        this.affectedRows = null;
-        this.changedRows  = null;
-        this.result       = null;
     }
 
     //==========================================================================
@@ -40,12 +35,11 @@ class MDBWrapper {
     //==========================================================================
 
     async exec(query, args = [ ]) { // FN: MDBWrapper.exec
-        var result        = await this.pool.execute(query, args);
-        this.result       = result[0];
-        this.insertId     = result.insertId;
-        this.affectedRows = result.affectedRows;
-        this.changedRows  = result.changedRows;
-        return this.result;
+        var result                  = await this.pool.execute(query, args);
+        result[0].insertId     = result.insertId;
+        result[0].affectedRows = result.affectedRows;
+        result[0].changedRows  = result.changedRows;
+        return result[0];
     }
 
     //==========================================================================

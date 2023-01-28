@@ -30,6 +30,10 @@ async function main() {
 
     //--------------------------------------------------------------------------
 
+    // TODO: load remaining config from database
+
+    //--------------------------------------------------------------------------
+
     console.log("Initializing API...");
     var $G = new Gadgetry(api, {
         maxFieldCount: 32,

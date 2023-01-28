@@ -1,15 +1,14 @@
 import * as $P from "./primitives.mjs";
 
 
-
 //==============================================================================
 
-async function prepArgs(args, spec, loginRequired = true) {
+export async function prepArgs(args, spec, loginRequired = true) {
     var user = false;
     if(loginRequired) {
         if(args._loginToken === undefined)
             return { _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." };
-        user = loadUser(args._loginToken);
+        user = $P.userLoad(args._loginToken);
         if(user._errcode)
             return user;
     }
@@ -17,38 +16,6 @@ async function prepArgs(args, spec, loginRequired = true) {
     if(args._errcode)
         return args;
    return [ args, user ];
-}
-
-
-
-
-//==============================================================================
-
-async function loadUser(loginToken) {
-    var session = { };
-    var q = "SELECT users.*, sessions.session "
-        + "FROM users "
-        + "LEFT JOIN sessions ON sessions.userId = users.id "
-        + "WHERE loginToken = ? AND loginExpires > NOW()";
-    var user = await mdb.firstRow(q, [loginToken]);
-    if(user === undefined)
-        return { _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." };
-    if(user.session === null) {
-        user.session = { };
-    } else {
-        try {
-            user.session = JSON.parse(user.session);
-            user.session._dirty = false;
-        } catch(e) {
-            user.session = { };
-        }   user.session._dirty = true;
-    }
-
-    var q = "UPDATE users SET loginExpires = DATE_ADD(NOW(), 'INTERVAL ? MINUTE') "
-        + "WHERE id = ?";
-    await mdb.exec(q, [cfg.sessionLength, user.id]);
-
-    return user;
 }
 
 
@@ -62,13 +29,13 @@ async function loadUser(loginToken) {
 //     }
 //
 
-function validate(rawArgs, spec) {
+export function validate(rawArgs, spec) {
     var args = { };
 
     // Check to see that all required arguments are present.
 
     for(var k in spec)
-        if(spec[k].req && rawArgs[g] === undefined)
+        if(spec[k].req && rawArgs[k] === undefined)
             return { _errcode: "MISSINGARG", _errmsg: "The " + k + " argument is required." };
 
     for(var k in rawArgs) {
@@ -128,20 +95,20 @@ function validate(rawArgs, spec) {
 
             case "string":
                 args[k] = args[k].toString();
+                if(spec[k].trim)
+                    args[k] = args[k].trim();
                 if(spec[k].min !== undefined && args[k].length < spec[k].min)
                     return { _errcode: "BADARG", _errmsg: k + " must be at least " + spec[k].min + " characters long." };
                 if(spec[k].max !== undefined && args[k].length > spec[k].max)
                     return { _errcode: "BADARG", _errmsg: k + " must be no more than " + spec[k].max + " characters long." };
+                if(spec[k].legal !== undefined && spec[k].legal.indexOf(args[k]) == -1)
+                    return { _errcode: "BADARG", _errmsg: k + " must be one of: \"" + spec[k].legal.join("\", \"") + "\"." };
                 break;
         }
     }
-
+    return args;
 }
 
 
-export {
-    inject,
-    prepArgs,
-    saveSession,
-};
+
 
