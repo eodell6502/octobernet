@@ -1,5 +1,6 @@
 import GQuery from "./node_modules/gadgetry-api/GQuery.mjs";
 import { sha224 } from "js-sha256";
+import nodemailer from "nodemailer";
 
 //==============================================================================
 
@@ -80,6 +81,7 @@ export async function updateRecordById(table, id, args) { // FN: updateRecordByI
 // record matches the token, an error record is returned.
 
 export async function userLoad(loginToken) { // FN: userLoad
+
     var q = "SELECT users.*, sessions.session "
         + "FROM users "
         + "LEFT JOIN sessions ON sessions.userId = users.id "
@@ -98,9 +100,12 @@ export async function userLoad(loginToken) { // FN: userLoad
         }   user.session._dirty = true;
     }
 
-    var q = "UPDATE users SET loginExpires = DATE_ADD(NOW(), 'INTERVAL ? MINUTE') "
+    var q = "UPDATE users SET loginExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
         + "WHERE id = ?";
-    await mdb.exec(q, [cfg.sessionLength, user.id]);
+    await mdb.exec(q, [cfg.sessionLifetime, user.id]);
+
+    var q = "UPDATE users SET lastActive = NOW() where id = ?";
+    await mdb.exec(q, [user.id]);
 
     return user;
 }
@@ -193,16 +198,6 @@ export async function userSuspensionCheck(userId) { // FN: userSuspensionCheck
 
 
 //==============================================================================
-// Updates the lastActivity field for the supplied user ID.
-
-export async function userActivityUpdate(userId) { // FN: userActivityUpdate
-    var q = "UPDATE users SET lastActive = NOW() where id = ?";
-    await mdb.exec(q, [userId]);
-    return;
-}
-
-
-//==============================================================================
 // Creates, stores, and returns a loginToken for the supplied user ID, using the
 // configured sessionLifetime. Clears out any outstanding verification token at
 // the same time.
@@ -227,7 +222,7 @@ export async function userLoginToken(userId) { // FN: userLoginToken
 // "username", "email", or "displayName" -- already exists. If a user ID is
 // passed, that account will be ignored.
 
-export async function userIdentifierExists(identifier, value, userId = 0) {
+export async function userIdentifierExists(identifier, value, userId = 0) { // FN: userIdentifierExists
     if(["username", "email", "displayName"].indexOf(identifier) == -1)
         return false;
     var qargs = [ value ];
@@ -246,7 +241,7 @@ export async function userIdentifierExists(identifier, value, userId = 0) {
 // user and returns its ID. If any of the identifiers already exist, -1 will be
 // returned instead. It is assumed all inputs have already been validated.
 
-export async function userNewCreate(username, email, password, displayName, userType) {
+export async function userNewCreate(username, email, password, displayName, userType) { // FN: userNewCreate
     var q = "INSERT INTO users SET username = ?, email = ?, password = ?, "
         + "type = ?, displayName = ?, created = NOW()";
     try {
@@ -262,12 +257,13 @@ export async function userNewCreate(username, email, password, displayName, user
 // Generates a verification token for the supplied userId and updates the user
 // record accordingly.
 
-export async function userVerificationTokenCreate(userId) {
+export async function userVerificationTokenCreate(userId) { // FN: userVerificationTokenCreate
+    var token = randomHash();
     var q = "UPDATE users SET verificationToken = ?, "
         + "verificationExpires = DATE_ADD(NOW, INTERVAL ? MINUTE) "
         + "WHERE id = ? LIMIT 1";
-    await mdb.exec(q, [randomHash, cfg.verificationLifetime, userId]);
-    return;
+    await mdb.exec(q, [token, cfg.verificationLifetime, userId]);
+    return token;
 }
 
 
@@ -276,11 +272,79 @@ export async function userVerificationTokenCreate(userId) {
 // "noob" to "user" at the same time. Returns a boolean indicating success or
 // failure.
 
-export async function userNewVerify(token) {
+export async function userNewVerify(token) { // FN: userNewVerify
     var q = "UPDATE users SET type = 'user', verificationToken = NULL, "
         + "verificationExpires = NULL WHERE verificationToken = ? "
+        + "AND verificationExpires < NOW() "
         + "LIMIT 1";
     var res = await mdb.exec(q, [token]);
     return res.changedRows ? true : false;
 }
+
+
+//==============================================================================
+// Takes a verification token and a password, and if valid, sets the user
+// password.
+
+export async function userPasswordReset(token, password) { // FN: userPasswordReset
+    var hash = sha224(password);
+    var q = "UPDATE users SET password = ?, verificationToken = NULL, "
+        + "verificationExpires = NULL WHERE verificationToken = ? "
+        + "AND verificationExpires < NOW() "
+        + "LIMIT 1";
+    var res = await mdb.exec(q, [hash, token]);
+    return res.changedRows ? true : false;
+}
+
+
+//==============================================================================
+// Given a loginToken, logs the associated user out.
+
+export async function userLogout(token) { // FN: userLogout
+    var q = "UPDATE users SET loginToken = NULL, loginExpires = NULL "
+        + "WHERE loginToken = ?";
+    await mdb.exec(q, [token]);
+    return;
+}
+
+
+//==============================================================================
+// Updates the lastActive field for the specified user.
+
+export async function userActivityUpdate(userId) { // FN: userActivityUpdate
+    var q = "UPDATE users SET lastActive = NOW() WHERE id = ?";
+    await mdb.exec(q, [userId]);
+    return;
+}
+
+
+//==============================================================================
+// Sends an HTML-only email.
+
+export async function sendEmail(sender, recipient, subject, body) { // FN: sendEmail
+
+    var transporter = nodemailer.createTransport({
+        host:   cfg.email.host,
+        port:   cfg.email.port,
+        secure: cfg.email.secure,
+        auth: {
+            user: cfg.email.username,
+            pass: cfg.email.password
+        },
+        tls: {
+            rejectUnauthorized: false
+        }
+    });
+
+    var res = await transporter.sendMail({
+        from:     sender,
+        to:       recipient,
+        subject:  subject,
+        html:     body,
+    });
+
+    // console.log(res); // TODO: do something with the response
+}
+
+
 

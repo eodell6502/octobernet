@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="us">
+<head>  <meta charset="utf-8">
+<title>OctoberNet: Login</title>
+<style type="text/css">
+
+div.hidden { display: none; }
+
+</style>
+<script src="js/jquery-3.6.3.min.js"></script>
+<!-- <script src="js/GQuery.js"></script> -->
+<script type="module">
+import GQuery from "./js/GQuery.mjs";
+var apiUrl = "http://localhost/on";
+
+checkForLogin();
+
+$(document).ready(function() { // FN: document.ready
+    $("#loginError").html("");
+    $("#loginButton").on("click", login);
+    $("#newuserLink").on("click", showNewUser);
+    $("#newuserCancel").on("click", showLogin);
+    $("#newuserButton").on("click", createNoob);
+
+    var getParams = (new URL(document.location)).searchParams;
+    if(getParams.has("m")) {
+        if(getParams.get("m") == "nu") {
+            registerNoob(getParams.get("vt"));
+        }
+    } else {
+        showLogin();
+    }
+});
+
+
+//==============================================================================
+
+async function checkForLogin() { // FN: checkForLogin
+    if(!localStorage.loginToken)
+        return;
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userLoginCheck", { _loginToken: localStorage.loginToken });
+    if(res.loggedIn)
+        window.location = "newsreader.html";
+}
+
+//==============================================================================
+
+async function login() { // FN: login
+    var username = document.login.username.value.trim();
+    if(username.length < 1 || username.length > 64) {
+        $("#loginError").html("Username must be 1-64 characters long.");
+        return;
+    }
+    var password = document.login.password.value;
+    if(password.length < 1 || password.length > 64) {
+        $("#loginError").html("Password must be 1-64 characters long.");
+        return;
+    }
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userLogin", {
+        username: username,
+        password: password,
+    });
+
+    if(res._errcode) {
+        switch(res._errcode) {
+            case "BADLOGIN":
+                $("#loginError").html("Password or username is incorrect. "
+                    + "Please try again.");
+                break;
+            case "DELETED":
+                $("#loginError").html("The \"" + username + "\" account "
+                    + "has been permanently locked.");
+                break;
+            case "SUSPENDED":
+                $("#loginError").html("The \"" + username + "\" account has "
+                    + "been temporarily suspended until " + res.until + ". Please "
+                    + "try again later.");
+        }
+    } else if(res.loginToken) {
+        localStorage.loginToken  = res.loginToken;
+        localStorage.userId      = res.id;
+        localStorage.username    = res.username;
+        localStorage.userEmail   = res.email;
+        localStorage.displayName = res.displayName;
+        localStorage.userType    = res.type;
+        window.location = "newsreader.html";
+    }
+
+}
+
+//==============================================================================
+
+function showLogin() { // FN: showLogin
+    document.login.reset();
+    $("div.dialog").addClass("hidden");
+    $("#loginDialog").removeClass("hidden");
+}
+
+//==============================================================================
+
+function showNewUser() { // FN: showNewUser
+    document.newuser.reset();
+    $("div.dialog").addClass("hidden");
+    $("#newuserDialog").removeClass("hidden");
+}
+
+//==============================================================================
+
+function showNewUserEmail() { // FN: showNewUserEmail
+    $("div.dialog").addClass("hidden");
+    $("#newuseremail").removeClass("hidden");
+}
+
+
+//==============================================================================
+
+function showRegisterDialog() { // FN: showRegisterDialog
+    $("div.dialog").addClass("hidden");
+    $("#registerDialog").removeClass("hidden");
+}
+
+//==============================================================================
+
+async function createNoob() { // FN: createNoob
+    var username    = document.newuser.username.value.trim();
+    if(username.length < 1 || username.length > 64) {
+        $("#newuserError").html("Username must be 1-64 characters long.");
+        return;
+    }
+    var displayName = document.newuser.displayName.value.trim();
+    if(displayName.length < 1 || displayName.length > 64) {
+        $("#newuserError").html("Display name must be 1-64 characters long.");
+        return;
+    }
+    var email       = document.newuser.email.value.trim();
+    if(email.length < 1 || email.length > 64) {
+        $("#newuserError").html("Email must be 1-64 characters long.");
+        return;
+    }
+    var password    = document.newuser.password.value;
+    if(password.length < 1 || password.length > 64) {
+        $("#newuserError").html("Password must be 1-64 characters long.");
+        return;
+    }
+    var password2   = document.newuser.password2.value;
+    if(password != password2) {
+        $("#newuserError").html("Passwords do not match.");
+        return;
+    }
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userCreateNoob", {
+        username:    username,
+        email:       email,
+        password:    password,
+        displayName: displayName
+    });
+
+    if(res._errcode) {
+        $("#newuserError").html(res._errmsg);
+    } else if(res.status && res.status == "OK") {
+        $("#newuserEmailMessage").html("A confirmation email has been sent to "
+            + email + ". Click on the link in the email to complete your "
+            + "registration.");
+        showNewUserEmail();
+    }
+}
+
+//==============================================================================
+
+async function registerNoob(vt) { // FN: registerNoob
+    $("#registerDialogMessage").html("Please wait...");
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userVerify", {
+        verificationToken: vt
+    });
+
+    if(res._errcode) {
+        $("#registerDialogMessage").html(res._errmsg);
+    } else {
+        $("#registerDialogMessage").html("Your account has been created. "
+            + "<a href=\"index.html\">Click here</a> to log in.");
+    }
+}
+
+
+</script>
+</head><body>
+
+<!-- login -->
+
+<div id="loginDialog" class="dialog hidden">
+<h1>Login</h1>
+<div id="loginError"></div>
+<form name="login" onsubmit="return false;">
+Username: <input type="text" name="username" size="32" maxlength="64"><br/>
+Password: <input type="password" name="password" size="32" maxlength="64"><br/>
+<button id="loginButton">Log In</button>
+</form>
+<span id="newuserLink">Create new account.</span>
+</div>
+
+<!-- new user signup --->
+
+<div id="newuserDialog" class="dialog hidden">
+<h1>New User</h1>
+<div id="newuserError"></div>
+<form name="newuser" onsubmit="return false;">
+Username: <input type="text" name="username" size="32" maxlength="64"><br/>
+Display Name: <input type="text" name="displayName" size="32" maxlength="64"><br/>
+Email: <input type="text" name="email" size="32" maxlength="64"><br/>
+Password: <input type="password" name="password" size="32" maxlength="64"><br/>
+Confirm Password: <input type="password" name="password2" size="32" maxlength="64"><br/>
+<button id="newuserButton">Create New Account</button>
+<button id="newuserCancel">Cancel</button>
+</form>
+</div>
+
+<!-- new user email notification -->
+
+<div id="newuserEmail" class="dialog hidden">
+<h1>New User</h1>
+<div id="newuserEmailMessage"></div>
+</div>
+
+<!-- new user registration -->
+
+<div id="registerDialog" class="dialog hidden">
+<h1>New User Registration</h1>
+<div id="registerDialogMessage"></div>
+</div>
+
+
+<!-- password reset start -->
+
+<div id="pwStartDialog" class="dialog hidden">
+<h1>Password Reset</h1>
+<div id="pwStartError"></div>
+<form name="pwstart" onsubmit="return false;">
+
+</form>
+</div>
+
+
+<!-- password reset finish -->
+
+<div id="pwFinishDialog" class="dialog hidden">
+<h1>Password Reset</h1>
+
+</div>
+
+
+<!-- username recovery -->
+
+<div id="usernameDialog" class="dialog hidden">
+<h1>Username Recovery</h1>
+
+</div>
+
+
+</body>
+</html>

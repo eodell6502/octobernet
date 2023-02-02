@@ -23,7 +23,7 @@ export async function userLogin(args) { // FN: userLogin
         return { _errcode: "SUSPENDED", until: user.suspendedUntil };
     else
         user.supendedUntil = null;
-    if(sha224(args.password) == user.password) {
+    if(sha224(args.password) == user.password) { console.log(user);
         await $P.userActivityUpdate(user.id);
         user.loginToken = await $P.userLoginToken(user.id);
         return {
@@ -36,6 +36,18 @@ export async function userLogin(args) { // FN: userLogin
         }
     } else
         return { _errcode: "BADLOGIN" };
+}
+
+
+//==============================================================================
+
+export async function userLogout(args) { // FN: userLogout
+    if(args._loginToken) {
+        await $P.userLogout(args._loginToken);
+        return { status: "OK" };
+    } else {
+        return { _errcode: "MISSINGARG", errmsg: "_loginToken must be supplied." };
+    }
 }
 
 
@@ -90,9 +102,11 @@ export async function userCreateNoob(args) { // FN: userCreateNoob
     if(userId == -1)
         return { _errcode: "DUPUSER", _errmsg: "User already exists." };
 
-    await $P.userVerificationTokenCreate(userId);
+    var token = await $P.userVerificationTokenCreate(userId);
 
-    // TODO: send verification email
+    await $P.sendEmail(cfg.email.autoAddress, args.email, "New OctoberNet account",
+        "<p>To verify and begin using your new OctoberNet account, "
+        + "<a href=\"" + cfg.mainUrl + "?m=nu&vt=" + token + "\">click here</a>.</p>");
 
     return { status: "OK" };
 }
@@ -121,8 +135,8 @@ export async function userVerify(args) { // FN: userVerify
 
 export async function userResetRequest(args) { // FN: userResetRequest
     var [args, user] = await prepArgs(args, {
-        username: { req: false,  type: "string", min: 0, max: 64, trim: true },
-        email   : { req: false,  type: "string", min: 0, max: 64, trim: true },
+        username: { req: false,  type: "string", min: 1, max: 64, trim: true },
+        email:    { req: false,  type: "string", min: 1, max: 64, trim: true },
     }, false);
     if(args._errcode)
         return args;
@@ -145,5 +159,34 @@ export async function userResetRequest(args) { // FN: userResetRequest
     return { status: "OK" };
 }
 
+
+//==============================================================================
+// Called to reset a user's password.
+
+export async function userResetProcess(args) { // FN: userResetProcess
+    var [args, user] = await prepArgs(args, {
+        verificationToken: { req: true,  type: "string", min: 1, max: 64, trim: true },
+        password:          { req: true,  type: "string", min: 1, max: 64, trim: true },
+    }, false);
+    if(args._errcode)
+        return args;
+
+    var res = await $P.userPasswordReset(args.verificationToken, args.password);
+
+    return { status: res ? "OK" : "FAILED" };
+}
+
+
+//==============================================================================
+// Tests whether the current user is logged in, i.e., has a valid login token.
+
+export async function userLoginCheck(args) { // FN: userLoginCheck
+    var [args, user] = await prepArgs(args, { }, true);
+    if(args._errcode)
+        return args;
+    return { loggedIn: true };
+}
+
+//==============================================================================
 
 
