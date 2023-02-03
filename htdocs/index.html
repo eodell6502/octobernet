@@ -11,24 +11,33 @@ div.hidden { display: none; }
 <!-- <script src="js/GQuery.js"></script> -->
 <script type="module">
 import GQuery from "./js/GQuery.mjs";
-var apiUrl = "http://localhost/on";
+var apiUrl = "http://192.168.1.140/on";
 
 checkForLogin();
 
 $(document).ready(function() { // FN: document.ready
     $("#loginError").html("");
     $("#loginButton").on("click", login);
-    $("#newuserLink").on("click", showNewUser);
-    $("#newuserCancel").on("click", showLogin);
+    $("#newuserLink").on("click", () => showDialog("newuserDialog"));
+    $("#newuserCancel").on("click", () => showDialog("loginDialog"));
     $("#newuserButton").on("click", createNoob);
+    $("#pwStartLink").on("click", () => showDialog("pwStartDialog"));
+    $("#pwStartButton").on("click", passwordResetStart);
+    $("#pwStartCancel").on("click", () => showDialog("loginDialog"));
+    $("#pwFinishButton").on("click", passwordResetFinalize);
+    $("#usernameLink").on("click", () => showDialog("usernameDialog"));
 
     var getParams = (new URL(document.location)).searchParams;
     if(getParams.has("m")) {
-        if(getParams.get("m") == "nu") {
+        var m = getParams.get("m")
+        if(m == "nu") {
             registerNoob(getParams.get("vt"));
+        } else if(m == "pr") {
+            passwordResetFinish(getParams.get("vt"));
         }
     } else {
-        showLogin();
+        showDialog("loginDialog");
+        document.login.reset();
     }
 });
 
@@ -91,36 +100,19 @@ async function login() { // FN: login
 
 }
 
-//==============================================================================
-
-function showLogin() { // FN: showLogin
-    document.login.reset();
-    $("div.dialog").addClass("hidden");
-    $("#loginDialog").removeClass("hidden");
-}
 
 //==============================================================================
 
-function showNewUser() { // FN: showNewUser
-    document.newuser.reset();
+function showDialog(name) { // FN: showDialog
+    if(name == "loginDialog")
+        document.login.reset();
+    else if(name == "newuserDialog")
+        document.newuser.reset();
+
     $("div.dialog").addClass("hidden");
-    $("#newuserDialog").removeClass("hidden");
+    $("#" + name).removeClass("hidden");
 }
 
-//==============================================================================
-
-function showNewUserEmail() { // FN: showNewUserEmail
-    $("div.dialog").addClass("hidden");
-    $("#newuseremail").removeClass("hidden");
-}
-
-
-//==============================================================================
-
-function showRegisterDialog() { // FN: showRegisterDialog
-    $("div.dialog").addClass("hidden");
-    $("#registerDialog").removeClass("hidden");
-}
 
 //==============================================================================
 
@@ -165,7 +157,7 @@ async function createNoob() { // FN: createNoob
         $("#newuserEmailMessage").html("A confirmation email has been sent to "
             + email + ". Click on the link in the email to complete your "
             + "registration.");
-        showNewUserEmail();
+        showDialog("newuserEmail");
     }
 }
 
@@ -185,6 +177,62 @@ async function registerNoob(vt) { // FN: registerNoob
         $("#registerDialogMessage").html("Your account has been created. "
             + "<a href=\"index.html\">Click here</a> to log in.");
     }
+    showDialog("registerDialog");
+}
+
+
+//==============================================================================
+
+async function passwordResetStart() { // FN: passwordResetStart
+    var email = document.pwstart.email.value.trim();
+    if(!email.length) {
+        $("#pwStartError").html("You must enter your email address.");
+        return;
+    }
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userResetRequest", {
+        email: email
+    });
+    showDialog("pwIntermediateDialog");
+}
+
+
+//==============================================================================
+
+async function passwordResetFinish(vt) { // FN: passwordResetFinish
+    document.pwfinish.reset();
+    document.pwfinish.vt.value = vt;
+    showDialog("pwFinishDialog");
+}
+
+
+//==============================================================================
+
+async function passwordResetFinalize() { // FN: passwordResetFinalize
+    var vt        = document.pwfinish.vt.value;
+    var password  = document.pwfinish.password.value;
+    var password2 = document.pwfinish.password2.value;
+
+    if(password != password2) {
+        $("#pwFinishError").html("Both copies of the password must "
+            + "match. Please try again.");
+            return;
+    }
+    $("#pwFinishError").html("");
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userResetProcess", {
+        verificationToken: vt,
+        password: password
+    });
+
+    if(res.status && res.status == "OK") {
+        $("#pwFinishError").html("Your password has been reset. "
+            + "<a href=\"index.html\">Click here</a> to log in.");
+    } else {
+        $("#pwFinishError").html("Unable to reset password."); // TODO
+    }
 }
 
 
@@ -201,7 +249,8 @@ Username: <input type="text" name="username" size="32" maxlength="64"><br/>
 Password: <input type="password" name="password" size="32" maxlength="64"><br/>
 <button id="loginButton">Log In</button>
 </form>
-<span id="newuserLink">Create new account.</span>
+<span id="newuserLink">Create new account.</span><br/>
+<span id="pwStartLink">Forgot my password</span>
 </div>
 
 <!-- new user signup --->
@@ -240,9 +289,24 @@ Confirm Password: <input type="password" name="password2" size="32" maxlength="6
 <div id="pwStartDialog" class="dialog hidden">
 <h1>Password Reset</h1>
 <div id="pwStartError"></div>
+<p>Enter your email address, and if it matches an active user account,
+we will send you a link to reset your password.</p>
 <form name="pwstart" onsubmit="return false;">
-
+Email: <input type="text" name="email" size="32" maxlength="64"><br/>
+<button id="pwStartButton">Send Reset Email</button>
+<button id="pwStartCancel">Cancel</button><br/>
+<span id="usernameLink">I forgot my username.</span>
 </form>
+</div>
+
+
+<!-- password reset intermediate -->
+
+<div id="pwIntermediateDialog" class="dialog hidden">
+<h1>Password Reset</h1>
+<p>If you entered a valid email address associated with an OctoberNet
+account, you will shortly receive an email with a link to reset your
+password.</p>
 </div>
 
 
@@ -250,7 +314,24 @@ Confirm Password: <input type="password" name="password2" size="32" maxlength="6
 
 <div id="pwFinishDialog" class="dialog hidden">
 <h1>Password Reset</h1>
+<p>Please enter your new password.</p>
+<div id="pwFinishError"></div>
+<form name="pwfinish" onsubmit="return false;">
+<input type="hidden" name="vt">
+New Password: <input type="password" name="password" size="32" maxlength="64"><br/>
+Confirm New Password: <input type="password" name="password2" size="32" maxlength="64"><br/>
+<button id="pwFinishButton">Set New Password</button>
+</form>
+</div>
 
+
+<!-- password reset final -->
+
+<div id="pwFinalDialog" class="dialog hidden">
+<h1>Password Reset</h1>
+<div id="pwResetOutcome">
+
+</div>
 </div>
 
 

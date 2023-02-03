@@ -146,15 +146,17 @@ export async function userResetRequest(args) { // FN: userResetRequest
 
     var res;
     if(args.username)
-        res = $P.getRecord("users", "username", args.username);
+        res = await $P.getRecord("users", "username", args.username);
     else
-        res = $P.getRecord("users", "email", args.email);
+        res = await $P.getRecord("users", "email", args.email);
     if(res === undefined)
         return { status: "OK" }
 
-    await $P.userVerificationTokenCreate(res.id);
+    var token = await $P.userVerificationTokenCreate(res.id);
 
-    // TODO: send verification email
+    await $P.sendEmail(cfg.email.autoAddress, args.email, "OctoberNet password reset request",
+        "<p>To reset the password of your OctoberNet account, "
+        + "<a href=\"" + cfg.mainUrl + "?m=pr&vt=" + token + "\">click here</a>.</p>");
 
     return { status: "OK" };
 }
@@ -164,9 +166,10 @@ export async function userResetRequest(args) { // FN: userResetRequest
 // Called to reset a user's password.
 
 export async function userResetProcess(args) { // FN: userResetProcess
+
     var [args, user] = await prepArgs(args, {
-        verificationToken: { req: true,  type: "string", min: 1, max: 64, trim: true },
-        password:          { req: true,  type: "string", min: 1, max: 64, trim: true },
+        verificationToken: { req: true,  type: "string", min: 1, max: 64 },
+        password:          { req: true,  type: "string", min: 1, max: 64 },
     }, false);
     if(args._errcode)
         return args;
@@ -188,5 +191,20 @@ export async function userLoginCheck(args) { // FN: userLoginCheck
 }
 
 //==============================================================================
+// Sends a username recovery email.
 
+export async function userUsernameRecovery(args) { // FN: userUsernameRecovery
+    var [args, user] = await prepArgs(args, {
+        email:    { req: false,  type: "string", min: 1, max: 64, trim: true },
+    }, false);
+
+    var res = await $P.getRecord("users", "email", args.email);
+    if(res)
+        await $P.sendEmail(cfg.email.autoAddress, args.email, "OctoberNet username recovery",
+            "<p>The username associated with this email address is "
+            + res.username + ". ";
+            + "<a href=\"" + cfg.mainUrl + "\">Click here</a> to log in.</p>");
+
+    return { status: "OK" }
+}
 

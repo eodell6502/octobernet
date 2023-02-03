@@ -35,10 +35,10 @@ class MDBWrapper {
     //==========================================================================
 
     async exec(query, args = [ ]) { // FN: MDBWrapper.exec
-        var result                  = await this.pool.execute(query, args);
-        result[0].insertId     = result.insertId;
-        result[0].affectedRows = result.affectedRows;
-        result[0].changedRows  = result.changedRows;
+        var result             = await this.pool.execute(query, args);
+//        result[0].insertId     = result.insertId;
+//        result[0].affectedRows = result.affectedRows;
+//        result[0].changedRows  = result.changedRows;
         return result[0];
     }
 

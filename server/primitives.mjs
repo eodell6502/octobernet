@@ -245,7 +245,7 @@ export async function userNewCreate(username, email, password, displayName, user
     var q = "INSERT INTO users SET username = ?, email = ?, password = ?, "
         + "type = ?, displayName = ?, created = NOW()";
     try {
-        var res = await mdb.exec(q, [username, email, password, userType, displayName]);
+        var res = await mdb.exec(q, [username, email, sha224(password), userType, displayName]);
     } catch(e) {
         return -1;
     }
@@ -260,7 +260,7 @@ export async function userNewCreate(username, email, password, displayName, user
 export async function userVerificationTokenCreate(userId) { // FN: userVerificationTokenCreate
     var token = randomHash();
     var q = "UPDATE users SET verificationToken = ?, "
-        + "verificationExpires = DATE_ADD(NOW, INTERVAL ? MINUTE) "
+        + "verificationExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
         + "WHERE id = ? LIMIT 1";
     await mdb.exec(q, [token, cfg.verificationLifetime, userId]);
     return token;
@@ -275,7 +275,7 @@ export async function userVerificationTokenCreate(userId) { // FN: userVerificat
 export async function userNewVerify(token) { // FN: userNewVerify
     var q = "UPDATE users SET type = 'user', verificationToken = NULL, "
         + "verificationExpires = NULL WHERE verificationToken = ? "
-        + "AND verificationExpires < NOW() "
+        + "AND verificationExpires > NOW() "
         + "LIMIT 1";
     var res = await mdb.exec(q, [token]);
     return res.changedRows ? true : false;
@@ -290,7 +290,7 @@ export async function userPasswordReset(token, password) { // FN: userPasswordRe
     var hash = sha224(password);
     var q = "UPDATE users SET password = ?, verificationToken = NULL, "
         + "verificationExpires = NULL WHERE verificationToken = ? "
-        + "AND verificationExpires < NOW() "
+        + "AND verificationExpires > NOW() "
         + "LIMIT 1";
     var res = await mdb.exec(q, [hash, token]);
     return res.changedRows ? true : false;
