@@ -202,7 +202,7 @@ export async function userUsernameRecovery(args) { // FN: userUsernameRecovery
     if(res)
         await $P.sendEmail(cfg.email.autoAddress, args.email, "OctoberNet username recovery",
             "<p>The username associated with this email address is "
-            + res.username + ". ";
+            + res.username + ". "
             + "<a href=\"" + cfg.mainUrl + "\">Click here</a> to log in.</p>");
 
     return { status: "OK" }
