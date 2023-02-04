@@ -4,7 +4,25 @@
 <title>OctoberNet: Login</title>
 <style type="text/css">
 
-div.hidden { display: none; }
+body,table,input { font: 10pt Arial; }
+body { background-color: #EEE; }
+#container {
+    margin-left: auto;
+    margin-right: auto;
+    width: 350px;
+    border: 1px solid black;
+    padding: 10px;
+    margin-top: 200px;
+    background-color: #FFF;
+}
+table.dialog { margin-left: auto; margin-right: auto; width: 330px; max-width: 330px; }
+table.dialog td.title { font-size: 12pt; font-weight: bold; text-align: center; }
+table.dialog th { text-align: left; }
+span.formlink { color: blue; cursor: pointer; }
+td.formlink { padding-top: 1em; text-align: center }
+td.ctr { text-align: center }
+.hidden { display: none; }
+td.errorbox { height: 1.5em; min-height: 1.5em; text-align: center; color: #C30; padding-top: 0.5em; padding-bottom: 0.5em; }
 
 </style>
 <script src="js/jquery-3.6.3.min.js"></script>
@@ -19,8 +37,8 @@ $(document).ready(function() { // FN: document.ready
     $("#loginError").html("");
     $("#loginButton").on("click", login);
     $("#newuserLink").on("click", () => showDialog("newuserDialog", document.newuser));
-    $("#newuserCancel").on("click", () => showDialog("loginDialog"), document.login);
-    $("#newuserButton").on("click", createNoob);
+    $("#newuserCancel").on("click", () => showDialog("loginDialog", document.login));
+    $("#newuserButton").on("click", noobCreate);
     $("#pwStartLink").on("click", () => showDialog("pwStartDialog", document.pwstart));
     $("#pwStartButton").on("click", passwordResetStart);
     $("#pwStartCancel").on("click", () => showDialog("loginDialog", document.login));
@@ -33,7 +51,7 @@ $(document).ready(function() { // FN: document.ready
     if(getParams.has("m")) {
         var m = getParams.get("m")
         if(m == "nu") {
-            registerNoob(getParams.get("vt"));
+            noobRegister(getParams.get("vt"));
         } else if(m == "pr") {
             passwordResetFinish(getParams.get("vt"));
         }
@@ -58,14 +76,16 @@ async function checkForLogin() { // FN: checkForLogin
 //==============================================================================
 
 async function login() { // FN: login
+    $("#loginError").html("");
+
     var username = document.login.username.value.trim();
     if(username.length < 1 || username.length > 64) {
-        $("#loginError").html("Username must be 1-64 characters long.");
+        $("#loginError").html("You must enter a username.");
         return;
     }
     var password = document.login.password.value;
     if(password.length < 1 || password.length > 64) {
-        $("#loginError").html("Password must be 1-64 characters long.");
+        $("#loginError").html("You must enter a password.");
         return;
     }
     var g = new GQuery(apiUrl);
@@ -86,7 +106,7 @@ async function login() { // FN: login
                 break;
             case "SUSPENDED":
                 $("#loginError").html("The \"" + username + "\" account has "
-                    + "been temporarily suspended until " + res.until + ". Please "
+                    + "been temporarily suspended until " + sqlTimeHumanize(res.until) + ". Please "
                     + "try again later.");
         }
     } else if(res.loginToken) {
@@ -101,33 +121,22 @@ async function login() { // FN: login
 
 }
 
-
 //==============================================================================
 
-function showDialog(name, form = null) { // FN: showDialog
-    if(form !== null)
-        form.reset();
-    $("div.dialog").addClass("hidden");
-    $("#" + name).removeClass("hidden");
-}
-
-
-//==============================================================================
-
-async function createNoob() { // FN: createNoob
-    var username    = document.newuser.username.value.trim();
+async function noobCreate() { // FN: noobCreate
+    var username    = document.newuser.username.value.trim(); console.log("username = ", username)
     if(username.length < 1 || username.length > 64) {
-        $("#newuserError").html("Username must be 1-64 characters long.");
+        $("#newuserError").html("You must enter a username.");
         return;
     }
     var displayName = document.newuser.displayName.value.trim();
     if(displayName.length < 1 || displayName.length > 64) {
-        $("#newuserError").html("Display name must be 1-64 characters long.");
+        $("#newuserError").html("You must enter a display name.");
         return;
     }
     var email       = document.newuser.email.value.trim();
-    if(email.length < 1 || email.length > 64) {
-        $("#newuserError").html("Email must be 1-64 characters long.");
+    if(!validateEmail(email)) {
+        $("#newuserError").html("You must enter a valid email.");
         return;
     }
     var password    = document.newuser.password.value;
@@ -142,7 +151,7 @@ async function createNoob() { // FN: createNoob
     }
 
     var g = new GQuery(apiUrl);
-    var res = await g.req("userCreateNoob", {
+    var res = await g.req("userNoobCreate", {
         username:    username,
         email:       email,
         password:    password,
@@ -161,7 +170,7 @@ async function createNoob() { // FN: createNoob
 
 //==============================================================================
 
-async function registerNoob(vt) { // FN: registerNoob
+async function noobRegister(vt) { // FN: noobRegister
     $("#registerDialogMessage").html("Please wait...");
 
     var g = new GQuery(apiUrl);
@@ -178,39 +187,12 @@ async function registerNoob(vt) { // FN: registerNoob
     showDialog("registerDialog");
 }
 
-
-//==============================================================================
-
-async function passwordResetStart() { // FN: passwordResetStart
-    var email = document.pwstart.email.value.trim();
-    if(!email.length) {
-        $("#pwStartError").html("You must enter your email address.");
-        return;
-    }
-
-    var g = new GQuery(apiUrl);
-    var res = await g.req("userResetRequest", {
-        email: email
-    });
-    showDialog("pwIntermediateDialog");
-}
-
-
-//==============================================================================
-
-async function passwordResetFinish(vt) { // FN: passwordResetFinish
-    document.pwfinish.reset();
-    document.pwfinish.vt.value = vt;
-    showDialog("pwFinishDialog");
-}
-
-
 //==============================================================================
 
 async function passwordResetFinalize() { // FN: passwordResetFinalize
-    var vt        = document.pwfinish.vt.value;
-    var password  = document.pwfinish.password.value;
-    var password2 = document.pwfinish.password2.value;
+    var vt        = document.pwFinish.vt.value;
+    var password  = document.pwFinish.password.value;
+    var password2 = document.pwFinish.password2.value;
 
     if(password != password2) {
         $("#pwFinishError").html("Both copies of the password must "
@@ -226,19 +208,70 @@ async function passwordResetFinalize() { // FN: passwordResetFinalize
     });
 
     if(res.status && res.status == "OK") {
-        $("#pwFinishError").html("Your password has been reset. "
-            + "<a href=\"index.html\">Click here</a> to log in.");
+       showDialog("pwCompletedDialog");
     } else {
         $("#pwFinishError").html("Unable to reset password."); // TODO
     }
 }
 
+//==============================================================================
+
+async function passwordResetFinish(vt) { // FN: passwordResetFinish
+    document.pwFinish.reset();
+    document.pwFinish.vt.value = vt;
+    showDialog("pwFinishDialog");
+}
+
+//==============================================================================
+
+async function passwordResetStart() { // FN: passwordResetStart
+    var email = document.pwstart.email.value.trim();
+    if(!validateEmail(email)) {
+        $("#pwStartError").html("You must enter a valid email address.");
+        return;
+    }
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userResetRequest", {
+        email: email
+    });
+    showDialog("pwIntermediateDialog");
+}
+
+//==============================================================================
+
+function showDialog(name, form = null) { // FN: showDialog
+    if(form !== null)
+        form.reset();
+    $(".dialog").addClass("hidden");
+    $("#" + name).removeClass("hidden");
+}
+
+//==============================================================================
+
+function sqlTimeHumanize(time) { // FN: sqlTimeHumanize
+    const days = [ "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday",
+        "Friday", "Saturday" ];
+    const months = [ "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December" ];
+    var d = new Date(Date.parse(time));
+
+    var hours = d.getHours();
+    var ampm = hours > 12 ? "pm" : "am";
+    if(hours == 0)
+        hours = 12;
+    else if(hours > 12)
+        hours -= 12;
+
+    return d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear()
+        + " at " + hours + ":" + zpad(d.getMinutes(), 2) + ampm;
+}
 
 //==============================================================================
 
 async function usernameRecovery() { // FN: usernameRecovery
     var email = document.username.email.value.trim();
-    if(!email.length) {
+    if(!validateEmail(email)) {
         $("#usernameError").html("You must enter a valid email address.");
         return;
     }
@@ -252,113 +285,284 @@ async function usernameRecovery() { // FN: usernameRecovery
     showDialog("usernameFinishDialog");
 }
 
+//==============================================================================
+
+function validateEmail(email) { // FN: validateEmail
+  var res = String(email)
+    .toLowerCase()
+    .match(
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    );
+    return res ? true : false;
+};
+
+//==============================================================================
+
+function zpad(n, p) { // FN: zpad
+    n = n.toString();
+    return "0".repeat(p - n.length) + n;
+}
+
 
 </script>
 </head><body>
 
+
+<div id="container">
+
+
 <!-- login -->
 
-<div id="loginDialog" class="dialog hidden">
-<h1>Login</h1>
-<div id="loginError"></div>
 <form name="login" onsubmit="return false;">
-Username: <input type="text" name="username" size="32" maxlength="64"><br/>
-Password: <input type="password" name="password" size="32" maxlength="64"><br/>
-<button id="loginButton">Log In</button>
+    <table id="loginDialog" class="dialog hidden">
+        <tbody>
+            <tr>
+                <td class="title" colspan="2">Login</td>
+            </tr><tr>
+                <td id="loginError" class="errorbox" colspan="2"></td>
+            </tr><tr>
+                <th>Username:</th>
+                <td><input type="text" name="username" size="20" maxlength="64"></td>
+            </tr><tr>
+                <th>Password:</th>
+                <td><input type="password" name="password" size="20" maxlength="64"></td>
+            </tr><tr>
+                <td colspan="2">&nbsp;</td>
+            </tr><tr>
+                <td class="ctr" colspan="2"><button id="loginButton">Log In</button></td>
+            </tr><tr>
+                <td colspan="2" class="formlink">
+                    <span id="newuserLink" class="formlink">Create new account</span>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <span id="pwStartLink" class="formlink">Forgot my password</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </form>
-<span id="newuserLink">Create new account.</span><br/>
-<span id="pwStartLink">Forgot my password</span>
-</div>
 
 <!-- new user signup --->
 
-<div id="newuserDialog" class="dialog hidden">
-<h1>New User</h1>
-<div id="newuserError"></div>
 <form name="newuser" onsubmit="return false;">
-Username: <input type="text" name="username" size="32" maxlength="64"><br/>
-Display Name: <input type="text" name="displayName" size="32" maxlength="64"><br/>
-Email: <input type="text" name="email" size="32" maxlength="64"><br/>
-Password: <input type="password" name="password" size="32" maxlength="64"><br/>
-Confirm Password: <input type="password" name="password2" size="32" maxlength="64"><br/>
-<button id="newuserButton">Create New Account</button>
-<button id="newuserCancel">Cancel</button>
+    <table id="newuserDialog" class="dialog hidden">
+        <tbody>
+            <tr>
+                <td class="title" colspan="2">New User</td>
+            </tr><tr>
+                <td id="newuserError" class="errorbox" colspan="2"></td>
+            </tr><tr>
+                <th>Username:</th>
+                <td><input type="text" name="username" size="20" maxlength="64"></td>
+            </tr><tr>
+                <th>Display Name:</th>
+                <td><input type="text" name="displayName" size="20" maxlength="64"></td>
+            </tr><tr>
+                <th>Email:</th>
+                <td><input type="text" name="email" size="20" maxlength="64"></td>
+            </tr><tr>
+                <td colspan="2">&nbsp;</td>
+            </tr><tr>
+                <th>Password:</th>
+                <td><input type="password" name="password" size="20" maxlength="64"></td>
+            </tr><tr>
+                <th>Confirm:</th>
+                <td><input type="password" name="password2" size="20" maxlength="64"></td>
+            </tr><tr>
+                <td colspan="2">&nbsp;</td>
+            </tr><tr>
+                <td class="ctr" colspan="2">
+                    <button id="newuserButton">Create New Account</button>&nbsp;<button id="newuserCancel">Cancel</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </form>
-</div>
 
 <!-- new user email notification -->
 
-<div id="newuserEmail" class="dialog hidden">
-<h1>New User</h1>
-<div id="newuserEmailMessage"></div>
-</div>
+<table id="newuserEmail" class="dialog hidden">
+    <tbody>
+        <tr>
+            <td class="title">New User</td>
+        </tr><tr>
+            <td colspan="2">&nbsp;</td>
+        </tr><tr>
+            <td id="newuserEmailMessage"></td>
+        </tr><tr>
+            <td colspan="2">&nbsp;</td>
+        </tr>
+    </tbody>
+</table>
 
 <!-- new user registration -->
 
-<div id="registerDialog" class="dialog hidden">
-<h1>New User Registration</h1>
-<div id="registerDialogMessage"></div>
-</div>
+<table id="registerDialog" class="dialog hidden">
+    <tbody>
+        <tr>
+            <td class="title">New User Registration</td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr><tr>
+            <td id="registerDialogMessage"></td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr>
+    </tbody>
+</table>
 
 <!-- password reset start -->
 
-<div id="pwStartDialog" class="dialog hidden">
-<h1>Password Reset</h1>
-<div id="pwStartError"></div>
-<p>Enter your email address, and if it matches an active user account,
-we will send you a link to reset your password.</p>
 <form name="pwstart" onsubmit="return false;">
-Email: <input type="text" name="email" size="32" maxlength="64"><br/>
-<button id="pwStartButton">Send Reset Email</button>
-<button id="pwStartCancel">Cancel</button><br/>
-<span id="usernameLink">I forgot my username.</span>
+    <table id="pwStartDialog" class="dialog hidden">
+        <tbody>
+            <tr>
+                <td class="title" colspan="2">Password Reset</td>
+            </tr><tr>
+                <td colspan="2">
+                    <p>Enter your email address, and if it matches an active
+                    user account, we will send you a link to reset your
+                    password.</p>
+                </td>
+            </tr><tr>
+                <td id="pwStartError" class="errorbox" colspan="2"></td>
+            </tr><tr>
+                <th>Email:</th>
+                <td><input type="text" name="email" size="20" maxlength="64"></td>
+            </tr><tr>
+                <td colspan="2">&nbsp;</td>
+            </tr><tr>
+                <td class="ctr" colspan="2">
+                    <button id="pwStartButton">Send Reset Email</button>&nbsp;<button id="pwStartCancel">Cancel</button>
+                </td>
+            </tr><tr>
+                <td colspan="2" class="formlink">
+                    <span id="usernameLink" class="formlink">Forgot my username</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </form>
-</div>
 
 <!-- password reset intermediate -->
 
-<div id="pwIntermediateDialog" class="dialog hidden">
-<h1>Password Reset</h1>
-<p>If you entered a valid email address associated with an OctoberNet
-account, you will shortly receive an email with a link to reset your
-password.</p>
-</div>
+<table id="pwIntermediateDialog" class="dialog hidden">
+    <tbody>
+        <tr>
+            <td class="title">Password Reset</td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr><tr>
+            <td>
+                <p>If you entered a valid email address associated with an OctoberNet
+                account, you will shortly receive an email with a link to reset your
+                password.</p>
+            </td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr>
+    </tbody>
+</table>
+
 
 <!-- password reset finish -->
 
-<div id="pwFinishDialog" class="dialog hidden">
-<h1>Password Reset</h1>
-<p>Please enter your new password.</p>
-<div id="pwFinishError"></div>
-<form name="pwfinish" onsubmit="return false;">
-<input type="hidden" name="vt">
-New Password: <input type="password" name="password" size="32" maxlength="64"><br/>
-Confirm New Password: <input type="password" name="password2" size="32" maxlength="64"><br/>
-<button id="pwFinishButton">Set New Password</button>
+<form name="pwFinish" onsubmit="return false;">
+    <input type="hidden" name="vt">
+    <table id="pwFinishDialog" class="dialog hidden">
+        <tbody>
+            <tr>
+                <td class="title" colspan="2">Password Reset</td>
+            </tr><tr>
+                <td colspan="2">
+                    <p>Please enter your new password.</p>
+                </td>
+            </tr><tr>
+                <td id="pwFinishError" class="errorbox" colspan="2"></td>
+            </tr><tr>
+                <th>Password:</th>
+                <td><input type="password" name="password" size="20" maxlength="64"></td>
+            </tr><tr>
+                <th>Confirm:</th>
+                <td><input type="password" name="password2" size="20" maxlength="64"></td>
+            </tr><tr>
+                <td colspan="2">&nbsp;</td>
+            </tr><tr>
+                <td class="ctr" colspan="2">
+                    <button id="pwFinishButton">Set New Password</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </form>
-</div>
+
+<!-- password reset intermediate -->
+
+<table id="pwCompletedDialog" class="dialog hidden">
+    <tbody>
+        <tr>
+            <td class="title">Password Reset</td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr><tr>
+            <td>
+                <p>Your password has been reset. <a href="index.html">Click here</a>
+                to log in.</p>
+            </td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr>
+    </tbody>
+</table>
+
 
 <!-- username recovery -->
 
-<div id="usernameDialog" class="dialog hidden">
-<h1>Username Recovery</h1>
-<p>Enter your email address, and we will send you your username.</p>
-<div id="usernameError"></div>
 <form name="username" onsubmit="return false;">
-Email: <input type="text" name="email" size="32" maxlength="64"><br/>
-<button id="usernameButton">Send Username</button>
-<button id="usernameCancel">Cancel</button><br/>
+    <table id="usernameDialog" class="dialog hidden">
+        <tbody>
+            <tr>
+                <td class="title" colspan="2">Username Recovery</td>
+            </tr><tr>
+                <td colspan="2">
+                    <p>Enter your email address, and we will send you your username.</p>
+                </td>
+            </tr><tr>
+                <td id="usernameError" class="errorbox" colspan="2"></td>
+            </tr><tr>
+                <th>Email:</th>
+                <td><input type="text" name="email" size="20" maxlength="64"></td>
+            </tr><tr>
+                <td colspan="2">&nbsp;</td>
+            </tr><tr>
+                <td class="ctr" colspan="2">
+                    <button id="usernameButton">Send Username</button>&nbsp;<button id="usernameCancel">Cancel</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 </form>
-</div>
 
 <!-- username recovery finish -->
 
-<div id="usernameFinishDialog" class="dialog hidden">
-<h1>Username Recovery</h1>
-<p>An email has been sent to <span id="usernameEmail"></span>
-with the associated username. <a href="index.html">Click here</a>
-to log in.</p>
-</div>
+<table id="usernameFinishDialog" class="dialog hidden">
+    <tbody>
+        <tr>
+            <td class="title">Username Recovery</td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr><tr>
+            <td>
+                <p>An email has been sent to <span id="usernameEmail"></span>
+                with the associated username. <a href="index.html">Click here</a>
+                to log in.</p>
+            </td>
+        </tr><tr>
+            <td>&nbsp;</td>
+        </tr>
+    </tbody>
+</table>
+
+</div> <!-- container -->
 
 
 </body>

@@ -4,6 +4,27 @@ import { prepArgs } from "./validator.mjs";
 
 
 //==============================================================================
+// Given an identifier and its value, deterimines whether it already exists in
+// the database. If userId is supplied, it will be excluded from consideration.
+
+export async function userIdentifierExists(args) { // FN: userExists
+    var [args, user] = await prepArgs(args, {
+        identifier: { req: true,  type: "string", legal: [ "username", "email", "displayName"], trim: true },
+        value:      { req: true,  type: "string", min: 1, max: 64 },
+        userId:     { req: false, type: "uint",   min: 1, max: Infinity },
+    }, false);
+    if(args._errcode)
+        return args;
+
+    if(args.userId === undefined)
+        args.userId = 0;
+
+    var res = await $P.userIdentifierExists(args.identifier, args.value, args.userId);
+    return { exists: res };
+}
+
+
+//==============================================================================
 
 export async function userLogin(args) { // FN: userLogin
     var [args, user] = await prepArgs(args, {
@@ -40,6 +61,17 @@ export async function userLogin(args) { // FN: userLogin
 
 
 //==============================================================================
+// Tests whether the current user is logged in, i.e., has a valid login token.
+
+export async function userLoginCheck(args) { // FN: userLoginCheck
+    var [args, user] = await prepArgs(args, { }, true);
+    if(args._errcode)
+        return args;
+    return { loggedIn: true };
+}
+
+
+//==============================================================================
 
 export async function userLogout(args) { // FN: userLogout
     if(args._loginToken) {
@@ -52,30 +84,9 @@ export async function userLogout(args) { // FN: userLogout
 
 
 //==============================================================================
-// Given an identifier and its value, deterimines whether it already exists in
-// the database. If userId is supplied, it will be excluded from consideration.
-
-export async function userIdentifierExists(args) { // FN: userExists
-    var [args, user] = await prepArgs(args, {
-        identifier: { req: true,  type: "string", legal: [ "username", "email", "displayName"], trim: true },
-        value:      { req: true,  type: "string", min: 1, max: 64 },
-        userId:     { req: false, type: "uint",   min: 1, max: Infinity },
-    }, false);
-    if(args._errcode)
-        return args;
-
-    if(args.userId === undefined)
-        args.userId = 0;
-
-    var res = await $P.userIdentifierExists(args.identifier, args.value, args.userId);
-    return { exists: res };
-}
-
-
-//==============================================================================
 // Creates a new noob user and sends the verification email.
 
-export async function userCreateNoob(args) { // FN: userCreateNoob
+export async function userNoobCreate(args) { // FN: userNoobCreate
     var [args, user] = await prepArgs(args, {
         username:    { req: true,  type: "string", min: 1, max: 64, trim: true },
         email:       { req: true,  type: "string", min: 1, max: 64, trim: true },
@@ -111,21 +122,22 @@ export async function userCreateNoob(args) { // FN: userCreateNoob
     return { status: "OK" };
 }
 
-//==============================================================================
-// Given a verification token, attempts to verify the associated noob.
 
-export async function userVerify(args) { // FN: userVerify
+//==============================================================================
+// Called to reset a user's password.
+
+export async function userResetProcess(args) { // FN: userResetProcess
+
     var [args, user] = await prepArgs(args, {
         verificationToken: { req: true,  type: "string", min: 1, max: 64 },
+        password:          { req: true,  type: "string", min: 1, max: 64 },
     }, false);
     if(args._errcode)
         return args;
 
-    var res = await $P.userNewVerify(args.verificationToken);
-    if(!res)
-        return { _errcode: "NOTFOUND", _errmsg: "Verification token not found." };
-    else
-        return { status: "OK" };
+    var res = await $P.userPasswordReset(args.verificationToken, args.password);
+
+    return { status: res ? "OK" : "FAILED" };
 }
 
 
@@ -163,34 +175,6 @@ export async function userResetRequest(args) { // FN: userResetRequest
 
 
 //==============================================================================
-// Called to reset a user's password.
-
-export async function userResetProcess(args) { // FN: userResetProcess
-
-    var [args, user] = await prepArgs(args, {
-        verificationToken: { req: true,  type: "string", min: 1, max: 64 },
-        password:          { req: true,  type: "string", min: 1, max: 64 },
-    }, false);
-    if(args._errcode)
-        return args;
-
-    var res = await $P.userPasswordReset(args.verificationToken, args.password);
-
-    return { status: res ? "OK" : "FAILED" };
-}
-
-
-//==============================================================================
-// Tests whether the current user is logged in, i.e., has a valid login token.
-
-export async function userLoginCheck(args) { // FN: userLoginCheck
-    var [args, user] = await prepArgs(args, { }, true);
-    if(args._errcode)
-        return args;
-    return { loggedIn: true };
-}
-
-//==============================================================================
 // Sends a username recovery email.
 
 export async function userUsernameRecovery(args) { // FN: userUsernameRecovery
@@ -207,4 +191,23 @@ export async function userUsernameRecovery(args) { // FN: userUsernameRecovery
 
     return { status: "OK" }
 }
+
+
+//==============================================================================
+// Given a verification token, attempts to verify the associated noob.
+
+export async function userVerify(args) { // FN: userVerify
+    var [args, user] = await prepArgs(args, {
+        verificationToken: { req: true,  type: "string", min: 1, max: 64 },
+    }, false);
+    if(args._errcode)
+        return args;
+
+    var res = await $P.userNewVerify(args.verificationToken);
+    if(!res)
+        return { _errcode: "NOTFOUND", _errmsg: "Verification token not found." };
+    else
+        return { status: "OK" };
+}
+
 

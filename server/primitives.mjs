@@ -2,130 +2,6 @@ import GQuery from "./node_modules/gadgetry-api/GQuery.mjs";
 import { sha224 } from "js-sha256";
 import nodemailer from "nodemailer";
 
-//==============================================================================
-
-export function randomHash() { // FN: randomHash
-    return sha224(process.hrtime.bigint().toString()
-        + process.pid
-        + process.hrtime.bigint().toString());
-}
-
-
-//==============================================================================
-// Returns the first row from table where field = value, or undefined if nothing
-// was found. Obviously for cases where the field is a primary key candidate.
-
-export async function getRecord(table, field, value) { // FN: getRecord
-    var q = "SELECT * FROM `" + table + "` WHERE `" + field + "` = ?";
-    try {
-        var res = await mdb.firstRow(q, [value]);
-        return res;
-    } catch(e) {
-        return undefined;
-    }
-}
-
-
-//==============================================================================
-// Inserts a record in the named table using the supplied args. Returns the new
-// ID or undefined if an error occurred. Of course, this presumes an auto-
-// increment primary key and that all required columns are provided in args.
-
-export async function insertRecord(table, args) { // FN: insertRecord
-    var qargs = [ ];
-    var assignments = [ ];
-    var q = "INSERT INTO `" + table + "` SET ";
-
-    for(var k in args) {
-        qargs.push(args[k]);
-        assignments.push("`" + k + "` = ?");
-    }
-    q += assignments.join(", ");
-    try {
-        var res = await mdb.exec(q, qargs);
-        return res.insertId;
-    } catch(e) {
-        return undefined;
-    }
-}
-
-
-//==============================================================================
-// Updates the record with id = id in table using the column/value pairs in args.
-// Returns the number of changed rows or undefined if an error occurred.
-
-export async function updateRecordById(table, id, args) { // FN: updateRecordById
-    var qargs = [ ];
-    var assignments = [ ];
-
-    for(var k in args) {
-        qargs.push(args[k]);
-        assignments.push("`" + k + "` = ?");
-    }
-    q = "UPDATE `" + table + "` SET "
-        + assignments.join(", ")
-        + "WHERE id = ?";
-    qargs.push(id);
-
-    try {
-        await mdb.exec(q, qargs);
-        return res.changedRows;
-    } catch(e) {
-        return undefined;
-    }
-}
-
-
-//==============================================================================
-// Loads a user and their session record based on the supplied loginToken. If no
-// record matches the token, an error record is returned.
-
-export async function userLoad(loginToken) { // FN: userLoad
-
-    var q = "SELECT users.*, sessions.session "
-        + "FROM users "
-        + "LEFT JOIN sessions ON sessions.userId = users.id "
-        + "WHERE loginToken = ? AND loginExpires > NOW()";
-    var user = await mdb.firstRow(q, [loginToken]);
-    if(user === undefined)
-        return { _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." };
-    if(user.session === null) {
-        user.session = { };
-    } else {
-        try {
-            user.session = JSON.parse(user.session);
-            user.session._dirty = false;
-        } catch(e) {
-            user.session = { };
-        }   user.session._dirty = true;
-    }
-
-    var q = "UPDATE users SET loginExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
-        + "WHERE id = ?";
-    await mdb.exec(q, [cfg.sessionLifetime, user.id]);
-
-    var q = "UPDATE users SET lastActive = NOW() where id = ?";
-    await mdb.exec(q, [user.id]);
-
-    return user;
-}
-
-
-//==============================================================================
-// Takes a user object returned by userLoad and updates the DB record of its
-// session if it has been modified.
-
-export async function sessionSave(user) { // FN: sessionSave
-    if(user.session._dirty == false)
-        return;
-    delete user.session._dirty;
-    var q = "UPDATE sessions SET session = ? WHERE userId = ?";
-    var sessionJSON = JSON.stringify(user.session);
-    await mdb.exec(q, [sessionJSON, user.id]);
-    user.session._dirty = false;
-    return;
-}
-
 
 //==============================================================================
 // Loads the key-value pairs from the config table, applying type conversions
@@ -177,23 +53,187 @@ export async function configUpdate(name, value) { // FN: configUpdate
     return;
 }
 
-//==============================================================================
-// Checks whether the user is suspended. If there is a suspension date, and it
-// is in the past, it is removed. Returns true if the user can log in, false if
-// they are still suspended, or undefined if the user is not found.
 
-export async function userSuspensionCheck(userId) { // FN: userSuspensionCheck
-    var q = "SELECT NOW() AS currentTime, suspendedUntil "
-        + "FROM users WHERE id = ?";
-    var res = await mdb.firstRow(q, [userId]);
-    if(res === undefined)
+//==============================================================================
+// Returns the first row from table where field = value, or undefined if nothing
+// was found. Obviously for cases where the field is a primary key candidate.
+
+export async function getRecord(table, field, value) { // FN: getRecord
+    var q = "SELECT * FROM `" + table + "` WHERE `" + field + "` = ?";
+    try {
+        var res = await mdb.firstRow(q, [value]);
+        return res;
+    } catch(e) {
         return undefined;
-    if(res.currentTime > res.suspendedUntil) {
-        q = "UPDATE users SET suspendedUntil = NULL WHERE id = ?";
-        await mdb.exec(q, [userId]);
-        return true;
-    } else
+    }
+}
+
+
+//==============================================================================
+// Inserts a record in the named table using the supplied args. Returns the new
+// ID or undefined if an error occurred. Of course, this presumes an auto-
+// increment primary key and that all required columns are provided in args.
+
+export async function insertRecord(table, args) { // FN: insertRecord
+    var qargs = [ ];
+    var assignments = [ ];
+    var q = "INSERT INTO `" + table + "` SET ";
+
+    for(var k in args) {
+        qargs.push(args[k]);
+        assignments.push("`" + k + "` = ?");
+    }
+    q += assignments.join(", ");
+    try {
+        var res = await mdb.exec(q, qargs);
+        return res.insertId;
+    } catch(e) {
+        return undefined;
+    }
+}
+
+
+//==============================================================================
+
+export function randomHash() { // FN: randomHash
+    return sha224(process.hrtime.bigint().toString()
+        + process.pid
+        + process.hrtime.bigint().toString());
+}
+
+
+//==============================================================================
+// Sends an HTML-only email.
+
+export async function sendEmail(sender, recipient, subject, body) { // FN: sendEmail
+
+    var transporter = nodemailer.createTransport({
+        host:   cfg.email.host,
+        port:   cfg.email.port,
+        secure: cfg.email.secure,
+        auth: {
+            user: cfg.email.username,
+            pass: cfg.email.password
+        },
+        tls: {
+            rejectUnauthorized: false
+        }
+    });
+
+    var res = await transporter.sendMail({
+        from:     sender,
+        to:       recipient,
+        subject:  subject,
+        html:     body,
+    });
+
+    // console.log(res); // TODO: do something with the response
+}
+
+
+//==============================================================================
+// Takes a user object returned by userLoad and updates the DB record of its
+// session if it has been modified.
+
+export async function sessionSave(user) { // FN: sessionSave
+    if(user.session._dirty == false)
+        return;
+    delete user.session._dirty;
+    var q = "UPDATE sessions SET session = ? WHERE userId = ?";
+    var sessionJSON = JSON.stringify(user.session);
+    await mdb.exec(q, [sessionJSON, user.id]);
+    user.session._dirty = false;
+    return;
+}
+
+
+//==============================================================================
+// Updates the record with id = id in table using the column/value pairs in args.
+// Returns the number of changed rows or undefined if an error occurred.
+
+export async function updateRecordById(table, id, args) { // FN: updateRecordById
+    var qargs = [ ];
+    var assignments = [ ];
+
+    for(var k in args) {
+        qargs.push(args[k]);
+        assignments.push("`" + k + "` = ?");
+    }
+    q = "UPDATE `" + table + "` SET "
+        + assignments.join(", ")
+        + "WHERE id = ?";
+    qargs.push(id);
+
+    try {
+        await mdb.exec(q, qargs);
+        return res.changedRows;
+    } catch(e) {
+        return undefined;
+    }
+}
+
+
+//==============================================================================
+// Updates the lastActive field for the specified user.
+
+export async function userActivityUpdate(userId) { // FN: userActivityUpdate
+    var q = "UPDATE users SET lastActive = NOW() WHERE id = ?";
+    await mdb.exec(q, [userId]);
+    return;
+}
+
+
+//==============================================================================
+// Returns a boolean indicating whether the supplied user identifier --
+// "username", "email", or "displayName" -- already exists. If a user ID is
+// passed, that account will be ignored.
+
+export async function userIdentifierExists(identifier, value, userId = 0) { // FN: userIdentifierExists
+    if(["username", "email", "displayName"].indexOf(identifier) == -1)
         return false;
+    var qargs = [ value ];
+    var q = "SELECT COUNT(*) AS cnt FROM users WHERE " + identifier + " = ?";
+    if(userId) {
+        q += " AND id != ?";
+        qargs.push(userId);
+    }
+    var cnt = await mdb.firstField(q, qargs)
+    return cnt ? true : false;
+}
+
+
+//==============================================================================
+// Loads a user and their session record based on the supplied loginToken. If no
+// record matches the token, an error record is returned.
+
+export async function userLoad(loginToken) { // FN: userLoad
+
+    var q = "SELECT users.*, sessions.session "
+        + "FROM users "
+        + "LEFT JOIN sessions ON sessions.userId = users.id "
+        + "WHERE loginToken = ? AND loginExpires > NOW()";
+    var user = await mdb.firstRow(q, [loginToken]);
+    if(user === undefined)
+        return { _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." };
+    if(user.session === null) {
+        user.session = { };
+    } else {
+        try {
+            user.session = JSON.parse(user.session);
+            user.session._dirty = false;
+        } catch(e) {
+            user.session = { };
+        }   user.session._dirty = true;
+    }
+
+    var q = "UPDATE users SET loginExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
+        + "WHERE id = ?";
+    await mdb.exec(q, [cfg.sessionLifetime, user.id]);
+
+    var q = "UPDATE users SET lastActive = NOW() where id = ?";
+    await mdb.exec(q, [user.id]);
+
+    return user;
 }
 
 
@@ -218,21 +258,13 @@ export async function userLoginToken(userId) { // FN: userLoginToken
 
 
 //==============================================================================
-// Returns a boolean indicating whether the supplied user identifier --
-// "username", "email", or "displayName" -- already exists. If a user ID is
-// passed, that account will be ignored.
+// Given a loginToken, logs the associated user out.
 
-export async function userIdentifierExists(identifier, value, userId = 0) { // FN: userIdentifierExists
-    if(["username", "email", "displayName"].indexOf(identifier) == -1)
-        return false;
-    var qargs = [ value ];
-    var q = "SELECT COUNT(*) AS cnt FROM users WHERE " + identifier + " = ?";
-    if(userId) {
-        q += " AND id != ?";
-        qargs.push(userId);
-    }
-    var cnt = await mdb.firstField(q, qargs)
-    return cnt ? true : false;
+export async function userLogout(token) { // FN: userLogout
+    var q = "UPDATE users SET loginToken = NULL, loginExpires = NULL "
+        + "WHERE loginToken = ?";
+    await mdb.exec(q, [token]);
+    return;
 }
 
 
@@ -250,20 +282,6 @@ export async function userNewCreate(username, email, password, displayName, user
         return -1;
     }
     return res.insertId;
-}
-
-
-//==============================================================================
-// Generates a verification token for the supplied userId and updates the user
-// record accordingly.
-
-export async function userVerificationTokenCreate(userId) { // FN: userVerificationTokenCreate
-    var token = randomHash();
-    var q = "UPDATE users SET verificationToken = ?, "
-        + "verificationExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
-        + "WHERE id = ? LIMIT 1";
-    await mdb.exec(q, [token, cfg.verificationLifetime, userId]);
-    return token;
 }
 
 
@@ -298,53 +316,34 @@ export async function userPasswordReset(token, password) { // FN: userPasswordRe
 
 
 //==============================================================================
-// Given a loginToken, logs the associated user out.
+// Checks whether the user is suspended. If there is a suspension date, and it
+// is in the past, it is removed. Returns true if the user can log in, false if
+// they are still suspended, or undefined if the user is not found.
 
-export async function userLogout(token) { // FN: userLogout
-    var q = "UPDATE users SET loginToken = NULL, loginExpires = NULL "
-        + "WHERE loginToken = ?";
-    await mdb.exec(q, [token]);
-    return;
+export async function userSuspensionCheck(userId) { // FN: userSuspensionCheck
+    var q = "SELECT NOW() AS currentTime, suspendedUntil "
+        + "FROM users WHERE id = ?";
+    var res = await mdb.firstRow(q, [userId]);
+    if(res === undefined)
+        return undefined;
+    if(res.currentTime > res.suspendedUntil) {
+        q = "UPDATE users SET suspendedUntil = NULL WHERE id = ?";
+        await mdb.exec(q, [userId]);
+        return true;
+    } else
+        return false;
 }
 
 
 //==============================================================================
-// Updates the lastActive field for the specified user.
+// Generates a verification token for the supplied userId and updates the user
+// record accordingly.
 
-export async function userActivityUpdate(userId) { // FN: userActivityUpdate
-    var q = "UPDATE users SET lastActive = NOW() WHERE id = ?";
-    await mdb.exec(q, [userId]);
-    return;
+export async function userVerificationTokenCreate(userId) { // FN: userVerificationTokenCreate
+    var token = randomHash();
+    var q = "UPDATE users SET verificationToken = ?, "
+        + "verificationExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
+        + "WHERE id = ? LIMIT 1";
+    await mdb.exec(q, [token, cfg.verificationLifetime, userId]);
+    return token;
 }
-
-
-//==============================================================================
-// Sends an HTML-only email.
-
-export async function sendEmail(sender, recipient, subject, body) { // FN: sendEmail
-
-    var transporter = nodemailer.createTransport({
-        host:   cfg.email.host,
-        port:   cfg.email.port,
-        secure: cfg.email.secure,
-        auth: {
-            user: cfg.email.username,
-            pass: cfg.email.password
-        },
-        tls: {
-            rejectUnauthorized: false
-        }
-    });
-
-    var res = await transporter.sendMail({
-        from:     sender,
-        to:       recipient,
-        subject:  subject,
-        html:     body,
-    });
-
-    // console.log(res); // TODO: do something with the response
-}
-
-
-
