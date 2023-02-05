@@ -223,6 +223,33 @@ definition.
 
 <!--
 
+Phase I - Login Module/Account Self-Management
+
+    * Password specification
+    * Mail templates
+    * API/Primitives documentation
+
+Phase II - Sysop Tools
+
+    * User management
+    * Configuration
+    * Forum management
+    * Font selection, local vs. content network
+
+Phase III - User Tools
+
+    * Account management
+    * Newsreader
+
+    Once the basic BBS is functioning, we have a public beta release.
+
+Phase IV - Federations
+
+
+Phase V - 2.0
+
+
+
 Goals:
 
     * Store-and-forward message network similar to Usenet, but over HTTPS.
