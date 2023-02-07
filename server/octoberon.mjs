@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+import Gadgetry from "gadgetry-api";
+
 import { config as cfg } from "./config.mjs";
 import MDBWrapper from "./mdbwrapper.mjs";
-import Gadgetry from "gadgetry-api";
+import * as $P from "./primitives.mjs";
 import * as api from "./api.mjs";
 
 global.mdb = null;

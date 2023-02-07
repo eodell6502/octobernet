@@ -100,9 +100,9 @@ async function login() { // FN: login
                 $("#loginError").html("Password or username is incorrect. "
                     + "Please try again.");
                 break;
-            case "DELETED":
+            case "BANNED":
                 $("#loginError").html("The \"" + username + "\" account "
-                    + "has been permanently locked.");
+                    + "has been permanently banned.");
                 break;
             case "SUSPENDED":
                 $("#loginError").html("The \"" + username + "\" account has "

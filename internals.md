@@ -182,9 +182,16 @@ the token does not exist or is expired.
 
 --------------------------------------------------------------------------------
 
+### `async function configGet(name)`
+
+Retrieves the named value from the `config` table, applying the appropriate type
+conversion. Returns the resulting value or `undefined` if not found.
+
+--------------------------------------------------------------------------------
+
 ### `async function configLoad()`
 
-Loads the key-value pairs from the config table, applying type conversions
+Loads the key-value pairs from the `config` table, applying type conversions
 as it goes. Returns the resulting object.
 
 --------------------------------------------------------------------------------

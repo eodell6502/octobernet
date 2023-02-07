@@ -4,36 +4,57 @@ import nodemailer from "nodemailer";
 
 
 //==============================================================================
+// Common type conversion routine for configGet and configLoad.
+
+function _configConvert(type, val) { // FN: _configConvert
+    if(val === null)
+        return null;
+    switch(type) {
+        case "int":
+            val = parseInt(val);
+            break;
+        case "float":
+            val = parseFloat(val);
+            break;
+        case "json":
+            try {
+                val = JSON.parse(val);
+            } catch(e) {
+                val = null;
+            }
+            break;
+        default:
+            break;
+    }
+    return val;
+}
+
+
+
+//==============================================================================
+// Loads a single named value from the config table, applying the appropriate
+// type conversion.
+
+export async function configGet(name) { // FN: configGet
+    var res = await mdb.exec("SELECT type, val FROM config WHERE name = ?", [name]);
+    if(res.length)
+        return _configConvert(name, res[0].type, res[0].val);
+    else
+        return undefined;
+}
+
+
+//==============================================================================
 // Loads the key-value pairs from the config table, applying type conversions
 // as it goes.
 
 export async function configLoad() { // FN: configLoad
     var res = await mdb.exec("SELECT * FROM config");
     var result = { };
-    var val;
 
-    for(var i = 0; i < res.length; i++) {
-        if(res[i].val === null)
-            continue;
-        switch(res[i].type) {
-            case "int":
-                res[i].val = parseInt(res[i].val);
-                break;
-            case "float":
-                res[i].val = parseFloat(res[i].val);
-                break;
-            case "json":
-                try {
-                    res[i].val = JSON.parse(res[i].val);
-                } catch(e) {
-                    res[i].val = null;
-                }
-                break;
-            default:
-                break;
-        }
-        result[res[i].name] = res[i].val;
-    }
+    for(var i = 0; i < res.length; i++)
+        result[res[i].name] = _configConvert(res[i].type, res[i].val);
+
     return result;
 }
 
@@ -226,9 +247,10 @@ export async function userLoad(loginToken) { // FN: userLoad
         }   user.session._dirty = true;
     }
 
+    var sessionLifetime = await configGet("sessionLifetime");
     var q = "UPDATE users SET loginExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
         + "WHERE id = ?";
-    await mdb.exec(q, [cfg.sessionLifetime, user.id]);
+    await mdb.exec(q, [sessionLifetime, user.id]);
 
     var q = "UPDATE users SET lastActive = NOW() where id = ?";
     await mdb.exec(q, [user.id]);
@@ -248,8 +270,9 @@ export async function userLoginToken(userId) { // FN: userLoginToken
         + "loginExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE), "
         + "verificationToken = NULL, verificationExpires = NULL "
         + "WHERE id = ?";
+    var sessionLifetime = await configGet("sessionLifetime");
     for(var i = 0; i < 5; i++) {
-        var res = await mdb.exec(q, [token, cfg.sessionLifetime, userId]);
+        var res = await mdb.exec(q, [token, sessionLifetime, userId]);
         if(res.changedRows)
             break;
     }
@@ -344,6 +367,7 @@ export async function userVerificationTokenCreate(userId) { // FN: userVerificat
     var q = "UPDATE users SET verificationToken = ?, "
         + "verificationExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
         + "WHERE id = ? LIMIT 1";
-    await mdb.exec(q, [token, cfg.verificationLifetime, userId]);
+    var verificationLifetime = await configGet("verificationLifetime");
+    await mdb.exec(q, [token, verificationLifetime, userId]);
     return token;
 }

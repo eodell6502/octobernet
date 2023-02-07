@@ -18,13 +18,22 @@ class MDBWrapper {
 
     async connect() { // FN: MDBWrapper.connect
         try {
-            this.pool = await mdb.createPool({
-                host:     this.host,
-                user:     this.user,
-                password: this.pwd,
-                database: this.db,
-                port:     this.port
-            });
+            if(this.db) {
+                this.pool = await mdb.createPool({
+                    host:     this.host,
+                    user:     this.user,
+                    password: this.pwd,
+                    database: this.db,
+                    port:     this.port
+                });
+            } else {
+                this.pool = await mdb.createPool({
+                    host:     this.host,
+                    user:     this.user,
+                    password: this.pwd,
+                    port:     this.port
+                });
+            }
         } catch(e) {
             console.log(e);
             return false;
@@ -36,9 +45,6 @@ class MDBWrapper {
 
     async exec(query, args = [ ]) { // FN: MDBWrapper.exec
         var result             = await this.pool.execute(query, args);
-//        result[0].insertId     = result.insertId;
-//        result[0].affectedRows = result.affectedRows;
-//        result[0].changedRows  = result.changedRows;
         return result[0];
     }
 

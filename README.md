@@ -36,13 +36,13 @@ More detailed information can be obtained by querying the host directly.
 
 ```javascript
 {
-    guid:   "c69821bcb6a8839396f965ab6ff72a70",
-    name:   "Some Domain BBS",
-    sdesc:  "A gathering place for anonymous lepidopterists.",
-    ldesc:  "Yada, yada, yada.",
-    domain: "somedomain.net",
-    port:   9111,
-    url:    "http://octnet.somedomain.net/welcome",
+    guid:      "c69821bcb6a8839396f965ab6ff72a70",
+    name:      "Some Domain BBS",
+    sdesc:     "A gathering place for anonymous lepidopterists.",
+    ldesc:     "Yada, yada, yada.",
+    domain:    "somedomain.net",
+    publicUrl: "http://octnet.somedomain.net",
+    apiUrl:    "http://octnet.somedomain.net/on",
     sysop: {
         name:  "Sylvia Brown",
         email: "sysop@somedomain.net",
@@ -124,7 +124,7 @@ owner/manager and central distribution point.
         attached: true,
     },
     maxSize:    "1M",                 // inclusive of body and attachments
-    commercial: false,                // or "individual" or "business"
+    commercial: false,                // or "individual" or "corporate"
     admin:      false,                // if true, for admin users only
     bodyType:   "html",               // "text" and "html" are currently supported
     advertise:  true,                 // if true, is visible to queries.
@@ -139,6 +139,7 @@ transit are represented as JSON objects with UTF-8 encoding.
 
 ```javascript
 {
+    guid:    "79054025255fb1a26e4bc422aef54eb4",          // required
     from: {                                               // required
         username: "absmith",                              // required
         host:     "somehost.com",                         // required
@@ -148,7 +149,6 @@ transit are represented as JSON objects with UTF-8 encoding.
     date:    "2023-10-01 12:56:42",                       // required
     forum:   "comp.lang.javascript",                      // required
     subject: "Using Canvas for animations"                // required
-    guid:    "79054025255fb1a26e4bc422aef54eb4",          // required
     path:    [ "somedomain.com", "anotherdomain.com" ],   // required
     parent:  "c69821bcb6a8839396f965ab6ff72a70",          // optional
     expires: "2023-11-01 12:56:42",                       // optional
@@ -227,7 +227,7 @@ Phase I - Login Module/Account Self-Management
 
     * Password specification
     * Mail templates
-    * API/Primitives documentation
+    * Terms of Service
 
 Phase II - Sysop Tools
 
@@ -248,6 +248,9 @@ Phase IV - Federations
 
 Phase V - 2.0
 
+    * More automation
+    * PostgreSQL backend option
+    * ZeroMQ option
 
 
 Goals:

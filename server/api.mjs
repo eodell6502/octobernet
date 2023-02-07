@@ -37,14 +37,14 @@ export async function userLogin(args) { // FN: userLogin
     user = await $P.getRecord("users", "username", args.username);
     if(user === undefined)
         return { _errcode: "BADLOGIN" };
-    if(user.deleted)
-        return { _errcode: "DELETED" };
+    if(user.banned)
+        return { _errcode: "BANNED" };
     var res = await $P.userSuspensionCheck(user.id);
     if(!res)
         return { _errcode: "SUSPENDED", until: user.suspendedUntil };
     else
         user.supendedUntil = null;
-    if(sha224(args.password) == user.password) { console.log(user);
+    if(sha224(args.password) == user.password) {
         await $P.userActivityUpdate(user.id);
         user.loginToken = await $P.userLoginToken(user.id);
         return {
