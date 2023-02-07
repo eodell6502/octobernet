@@ -16,6 +16,8 @@ function _configConvert(type, val) { // FN: _configConvert
         case "float":
             val = parseFloat(val);
             break;
+        case "boolean":
+            val = val == "true" ? true : false;
         case "json":
             try {
                 val = JSON.parse(val);
@@ -115,6 +117,47 @@ export async function insertRecord(table, args) { // FN: insertRecord
 
 
 //==============================================================================
+// Returns an object containing the password-specific configuration values.
+
+export async function passwordParamsGet() { // FN: passwordParamsGet
+    var q = "SELECT name, type, val FROM config "
+        + "WHERE name IN ('pwdMinLength', 'pwdHasLowercase', 'pwdHasUppercase', "
+        + "'pwdHasNumbers', 'pwdHasSpecialChars')";
+    var res = await mdb.exec(q);
+    var result = { };
+    for(var i = 0; i < res.length; i++) {
+        if(res[i].type == "boolean")
+            result[res[i].name] = res[i].value == "true" ? true : false;
+        else
+            result[res[i].name] = res[i].value;
+    }
+    return result;
+}
+
+
+//==============================================================================
+// Tests a password against the current password parameters.
+
+export async function passwordIsValid(password) { // FN: passwordIsInvalid
+    var p = await passwordParamsGet();
+
+    if(password.length < p.pwdMinLength)
+        return false;
+    if(p.pwdHasLowercase && password.match(/[a-z]/) === null)
+        return false;
+    if(p.pwdHasUppercase && password.match(/[A-Z]/) === null)
+        return false;
+    if(p.pwdHasNumbers && password.match(/[0-9]/) === null)
+        return false;
+    if(p.pwdHasSpecialChars && password.match(/[^A-Za-z0-9]/) === null)
+        return false;
+
+    return true;
+}
+
+
+//==============================================================================
+// Returns a random SHA-224 hash.
 
 export function randomHash() { // FN: randomHash
     return sha224(process.hrtime.bigint().toString()

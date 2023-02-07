@@ -218,6 +218,29 @@ increment primary key and that all required columns are provided in `args`.
 
 --------------------------------------------------------------------------------
 
+### `async function passwordIsValid(password)`
+
+Returns `true` if the supplied password meets all of the criteria specified by
+the password params (see `passwordParamsGet`).
+
+--------------------------------------------------------------------------------
+
+### `async function passwordParamsGet()`
+
+Returns the configured password parameters in the form:
+
+```javascript
+{
+    pwdMinLength:       8,
+    pwdHasLowercase:    true,
+    pwdHasUppercase:    true,
+    pwdHasNumbers:      true,
+    pwdHasSpecialChars: true
+}
+```
+
+--------------------------------------------------------------------------------
+
 ### `function randomHash()`
 
 Returns a random SHA-224 hash.

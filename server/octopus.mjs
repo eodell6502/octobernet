@@ -55,7 +55,7 @@ async function main() {
         }
         minicle.errmsg("info", "Database connection established.");
     }
-console.log(sw);
+
     switch(sw.command) {
         case "help":
             await help(sw.switches);
@@ -258,19 +258,26 @@ async function mktbl(switches) {
     await mdb.exec(q);
 
     var defaultConfig = {
-        sessionLifetime:      [ "integer", 60 * 24 ],
-        verificationLifetime: [ "integer", 60 * 24 ],
-        port:                 [ "integer", 8080    ],
-        mainUrl:              [ "string", "http://192.168.1.140/"],
-        maxFieldCount:        [ "integer", 32 ],
-        maxFieldSize:         [ "integer", 128000000 ],
-        maxFileCount:         [ "integer", 64 ],
-        maxFileSize:          [ "integer", 128000000 ],
+        sessionLifetime:      { type: "integer", val: 60 * 24, sdesc: "Login session lifetime in minutes." },
+        verificationLifetime: { type: "integer", val: 60 * 24, sdesc: "Verification token lifetime in minutes." },
+        port:                 { type: "integer", val: 8080, sdesc: "Port for the Octoberon API." },
+        mainUrl:              { type: "string",  val: "http://192.168.1.140/", sdesc: "URL of the login page." },
+        maxFieldCount:        { type: "integer", val: 32, sdesc: "Maximum fields allowed in API call." },
+        maxFieldSize:         { type: "integer", val: 128000000, sdesc: "Maximum size of an API field in bytes." },
+        maxFileCount:         { type: "integer", val: 64, sdesc: "Maximum number of files per API call." },
+        maxFileSize:          { type: "integer", val: 128000000, sdesc: "Maximum uploaded file size in bytes." },
+        pwdMinLength:         { type: "integer", val: 8, sdesc: "Minimum length of passwords." },
+        pwdHasLowercase:      { type: "boolean", val: "true", sdesc: "Require lowercase characters in passwords." },
+        pwdHasUppercase:      { type: "boolean", val: "true", sdesc: "Require uppercase characters in passwords." },
+        pwdHasNumbers:        { type: "boolean", val: "true", sdesc: "Require numbers in passwords." },
+        pwdHasSpecialChars:   { type: "boolean", val: "true", sdesc: "Require non-alphanumeric characters in passwords." },
     };
 
-    var q = "INSERT INTO `config` (`name`, `type`, `val`) VALUES(?, ?, ?)";
-    for(var k in defaultConfig)
-        await mdb.exec(q, [k, defaultConfig[k][0], defaultConfig[k][1]]);
+    var q = "INSERT INTO `config` (`name`, `type`, `val`, `sdesc`) VALUES(?, ?, ?, ?)";
+    for(var k in defaultConfig) {
+        var dc = defaultConfig[k];
+        await mdb.exec(q, [k, dc.type, dc.val, dc.sdesc]);
+    }
 
     minicle.errmsg("info", "Table creation completed.");
 }
