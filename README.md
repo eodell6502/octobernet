@@ -40,7 +40,6 @@ More detailed information can be obtained by querying the host directly.
     name:      "Some Domain BBS",
     sdesc:     "A gathering place for anonymous lepidopterists.",
     ldesc:     "Yada, yada, yada.",
-    domain:    "somedomain.net",
     publicUrl: "http://octnet.somedomain.net",
     apiUrl:    "http://octnet.somedomain.net/on",
     sysop: {
@@ -76,8 +75,6 @@ More detailed information can be obtained by querying the host directly.
 **`sdesc`:** A short description of the host, 1-64 characters.
 
 **`ldesc`:** A longer description of the host, up to 256 characters.
-
-**`domain`:** The domain at which the host resides.
 
 **`port`:** The port at which the OctoberNet software listens.
 
@@ -225,8 +222,8 @@ definition.
 
 Phase I - Login Module/Account Self-Management
 
-    * Password specification
     * Mail templates
+    * Email to config
     * Terms of Service
 
 Phase II - Sysop Tools

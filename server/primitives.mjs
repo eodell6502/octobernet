@@ -10,7 +10,7 @@ function _configConvert(type, val) { // FN: _configConvert
     if(val === null)
         return null;
     switch(type) {
-        case "int":
+        case "integer":
             val = parseInt(val);
             break;
         case "float":
@@ -40,9 +40,25 @@ function _configConvert(type, val) { // FN: _configConvert
 export async function configGet(name) { // FN: configGet
     var res = await mdb.exec("SELECT type, val FROM config WHERE name = ?", [name]);
     if(res.length)
-        return _configConvert(name, res[0].type, res[0].val);
+        return _configConvert(res[0].type, res[0].val);
     else
         return undefined;
+}
+
+
+//==============================================================================
+// Takes a list of config keys and returns an object with their values.
+
+export async function configGetMulti(...keys) { // FN: configGetMulti
+    var q = "SELECT name, type, val FROM config WHERE NAME IN (\"" +
+        ( keys.join("\", \"") + "\")";
+    var res = await mdb.exec(q);
+    var result = { };
+
+    for(var i = 0; i < res.length; i++)
+        result[res[i].name] = _configConvert(res[i].type, res[i].val);
+
+    return result;
 }
 
 
@@ -117,28 +133,9 @@ export async function insertRecord(table, args) { // FN: insertRecord
 
 
 //==============================================================================
-// Returns an object containing the password-specific configuration values.
-
-export async function passwordParamsGet() { // FN: passwordParamsGet
-    var q = "SELECT name, type, val FROM config "
-        + "WHERE name IN ('pwdMinLength', 'pwdHasLowercase', 'pwdHasUppercase', "
-        + "'pwdHasNumbers', 'pwdHasSpecialChars')";
-    var res = await mdb.exec(q);
-    var result = { };
-    for(var i = 0; i < res.length; i++) {
-        if(res[i].type == "boolean")
-            result[res[i].name] = res[i].value == "true" ? true : false;
-        else
-            result[res[i].name] = res[i].value;
-    }
-    return result;
-}
-
-
-//==============================================================================
 // Tests a password against the current password parameters.
 
-export async function passwordIsValid(password) { // FN: passwordIsInvalid
+export async function passwordIsValid(password) { // FN: passwordIsValid
     var p = await passwordParamsGet();
 
     if(password.length < p.pwdMinLength)
@@ -153,6 +150,49 @@ export async function passwordIsValid(password) { // FN: passwordIsInvalid
         return false;
 
     return true;
+}
+
+
+//==============================================================================
+// Returns text describing the requirements for a password in a form ready to be
+// displayed to an end-user.
+
+export async function passwordParamsDescribe() { // FN: passwordParamsDescribe
+    var params = await passwordParamsGet();
+    var result = [ "Passwords must:<ul>" ];
+    result.push("<li>Be at least " + params.pwdMinLength + " characters long.</li>");
+    if(params.pwdHasLowercase)
+        result.push("<li>Contain a lower case letter.</li>");
+    if(params.pwdHasUppercase)
+        result.push("<li>Contain an upper case letter.</li>");
+    if(params.pwdHasNumbers)
+        result.push("<li>Contain a number.</li>");
+    if(params.pwdHasSpecialChars)
+        result.push("<li>Contain punctuation or symbols.</li>");
+    result.push("</ul>");
+
+    return result.join("\n");
+}
+
+
+
+//==============================================================================
+// Returns an object containing the password-specific configuration values.
+
+export async function passwordParamsGet() { // FN: passwordParamsGet
+    var q = "SELECT name, type, val FROM config "
+        + "WHERE name IN ('pwdMinLength', 'pwdHasLowercase', 'pwdHasUppercase', "
+        + "'pwdHasNumbers', 'pwdHasSpecialChars')";
+    var res = await mdb.exec(q);
+    var result = { };
+    for(var i = 0; i < res.length; i++) {
+        if(res[i].type == "boolean")
+            result[res[i].name] = res[i].val == "true" ? true : false;
+        else
+            result[res[i].name] = res[i].val;
+    }
+
+    return result;
 }
 
 
@@ -367,19 +407,32 @@ export async function userNewVerify(token) { // FN: userNewVerify
 
 
 //==============================================================================
-// Takes a verification token and a password, and if valid, sets the user
-// password.
+// Takes a reset token and a password, and if valid, sets the user password.
 
 export async function userPasswordReset(token, password) { // FN: userPasswordReset
     var hash = sha224(password);
-    var q = "UPDATE users SET password = ?, verificationToken = NULL, "
-        + "verificationExpires = NULL WHERE verificationToken = ? "
-        + "AND verificationExpires > NOW() "
+    var q = "UPDATE users SET password = ?, resetToken = NULL, "
+        + "resetExpires = NULL WHERE resetToken = ? "
+        + "AND resetExpires > NOW() "
         + "LIMIT 1";
     var res = await mdb.exec(q, [hash, token]);
     return res.changedRows ? true : false;
 }
 
+
+//==============================================================================
+// Generates a reset token for the supplied userId and updates the user
+// record accordingly.
+
+export async function userResetTokenCreate(userId) { // FN: userResetTokenCreate
+    var token = randomHash();
+    var q = "UPDATE users SET resetToken = ?, "
+        + "resetExpires = DATE_ADD(NOW(), INTERVAL ? MINUTE) "
+        + "WHERE id = ? LIMIT 1";
+    var verificationLifetime = await configGet("verificationLifetime");
+    await mdb.exec(q, [token, verificationLifetime, userId]);
+    return token;
+}
 
 //==============================================================================
 // Checks whether the user is suspended. If there is a suspension date, and it

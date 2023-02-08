@@ -53,7 +53,7 @@ $(document).ready(function() { // FN: document.ready
         if(m == "nu") {
             noobRegister(getParams.get("vt"));
         } else if(m == "pr") {
-            passwordResetFinish(getParams.get("vt"));
+            passwordResetFinish(getParams.get("rt"));
         }
     } else {
         showDialog("loginDialog", document.login);
@@ -124,7 +124,7 @@ async function login() { // FN: login
 //==============================================================================
 
 async function noobCreate() { // FN: noobCreate
-    var username    = document.newuser.username.value.trim(); console.log("username = ", username)
+    var username    = document.newuser.username.value.trim();
     if(username.length < 1 || username.length > 64) {
         $("#newuserError").html("You must enter a username.");
         return;
@@ -190,7 +190,7 @@ async function noobRegister(vt) { // FN: noobRegister
 //==============================================================================
 
 async function passwordResetFinalize() { // FN: passwordResetFinalize
-    var vt        = document.pwFinish.vt.value;
+    var rt        = document.pwFinish.rt.value;
     var password  = document.pwFinish.password.value;
     var password2 = document.pwFinish.password2.value;
 
@@ -203,12 +203,14 @@ async function passwordResetFinalize() { // FN: passwordResetFinalize
 
     var g = new GQuery(apiUrl);
     var res = await g.req("userResetProcess", {
-        verificationToken: vt,
+        resetToken: rt,
         password: password
     });
 
     if(res.status && res.status == "OK") {
        showDialog("pwCompletedDialog");
+    } else if(res._errcode) {
+        $("#pwFinishError").html(res._errmsg);
     } else {
         $("#pwFinishError").html("Unable to reset password."); // TODO
     }
@@ -216,9 +218,9 @@ async function passwordResetFinalize() { // FN: passwordResetFinalize
 
 //==============================================================================
 
-async function passwordResetFinish(vt) { // FN: passwordResetFinish
+async function passwordResetFinish(rt) { // FN: passwordResetFinish
     document.pwFinish.reset();
-    document.pwFinish.vt.value = vt;
+    document.pwFinish.rt.value = rt;
     showDialog("pwFinishDialog");
 }
 
@@ -467,7 +469,7 @@ function zpad(n, p) { // FN: zpad
 <!-- password reset finish -->
 
 <form name="pwFinish" onsubmit="return false;">
-    <input type="hidden" name="vt">
+    <input type="hidden" name="rt">
     <table id="pwFinishDialog" class="dialog hidden">
         <tbody>
             <tr>

@@ -189,6 +189,12 @@ conversion. Returns the resulting value or `undefined` if not found.
 
 --------------------------------------------------------------------------------
 
+### `async function configGetMulti(...keys)`
+
+Takes a list of config keys and returns an object with their values.
+
+--------------------------------------------------------------------------------
+
 ### `async function configLoad()`
 
 Loads the key-value pairs from the `config` table, applying type conversions
@@ -205,8 +211,8 @@ Writes a key-value pair to the `config` table.
 ### `async function getRecord(table, field, value)`
 
 Returns the first row from `table` where `field == value`, or `undefined` if
-nothing was found. Obviously for cases where the field is a primary key
-candidate.
+nothing was found. Obviously for cases where the field is contains unique
+values.
 
 --------------------------------------------------------------------------------
 
@@ -222,6 +228,13 @@ increment primary key and that all required columns are provided in `args`.
 
 Returns `true` if the supplied password meets all of the criteria specified by
 the password params (see `passwordParamsGet`).
+
+--------------------------------------------------------------------------------
+
+### `async function passwordParamsDescribe()`
+
+Returns text describing the requirements for a password in a form ready to be
+displayed to an end-user.
 
 --------------------------------------------------------------------------------
 
@@ -321,8 +334,15 @@ indicating success or failure.
 
 ### `async function userPasswordReset(token, password)`
 
-Takes a verification `token` and a `password`, and if valid, sets the user
-password. Returns a boolean indicating success or failure.
+Takes a reset `token` and a `password`, and if valid, sets the user password.
+Returns a boolean indicating success or failure.
+
+--------------------------------------------------------------------------------
+
+### `async function userResetTokenCreate(userId)`
+
+Generates a reset token for the supplied `userId` and updates the user
+record accordingly.
 
 --------------------------------------------------------------------------------
 

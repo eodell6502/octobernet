@@ -108,16 +108,22 @@ export async function userNoobCreate(args) { // FN: userNoobCreate
     if(res)
         return { _errcode: "DUPDISPLAYNAME", _errmsg: "Display name \"" + args.displayName + "\" is already taken." }
 
+    var valid = await $P.passwordIsValid(args.password);
+    if(!valid) {
+        var errmsg = await $P.passwordParamsDescribe();
+        return { _errcode: "BADPASSWORD", _errmsg: errmsg };
+    }
+
     var userId = await $P.userNewCreate(args.username, args.email, args.password,
         args.displayName, "noob");
     if(userId == -1)
         return { _errcode: "DUPUSER", _errmsg: "User already exists." };
 
     var token = await $P.userVerificationTokenCreate(userId);
-
+    var mainUrl = await $P.configGet("mainUrl");
     await $P.sendEmail(cfg.email.autoAddress, args.email, "New OctoberNet account",
         "<p>To verify and begin using your new OctoberNet account, "
-        + "<a href=\"" + cfg.mainUrl + "?m=nu&vt=" + token + "\">click here</a>.</p>");
+        + "<a href=\"" + mainUrl + "?m=nu&vt=" + token + "\">click here</a>.</p>");
 
     return { status: "OK" };
 }
@@ -127,15 +133,21 @@ export async function userNoobCreate(args) { // FN: userNoobCreate
 // Called to reset a user's password.
 
 export async function userResetProcess(args) { // FN: userResetProcess
-
+console.log(args);
     var [args, user] = await prepArgs(args, {
-        verificationToken: { req: true,  type: "string", min: 1, max: 64 },
-        password:          { req: true,  type: "string", min: 1, max: 64 },
+        resetToken: { req: true,  type: "string", min: 1, max: 64 },
+        password:   { req: true,  type: "string", min: 1, max: 64 },
     }, false);
     if(args._errcode)
         return args;
 
-    var res = await $P.userPasswordReset(args.verificationToken, args.password);
+    var valid = await $P.passwordIsValid(args.password);
+    if(!valid) {
+        var errmsg = await $P.passwordParamsDescribe();
+        return { _errcode: "BADPASSWORD", _errmsg: errmsg };
+    }
+
+    var res = await $P.userPasswordReset(args.resetToken, args.password);
 
     return { status: res ? "OK" : "FAILED" };
 }
@@ -164,11 +176,12 @@ export async function userResetRequest(args) { // FN: userResetRequest
     if(res === undefined)
         return { status: "OK" }
 
-    var token = await $P.userVerificationTokenCreate(res.id);
+    var token = await $P.userResetTokenCreate(res.id);
 
+    var mainUrl = await $P.configGet("mainUrl");
     await $P.sendEmail(cfg.email.autoAddress, args.email, "OctoberNet password reset request",
         "<p>To reset the password of your OctoberNet account, "
-        + "<a href=\"" + cfg.mainUrl + "?m=pr&vt=" + token + "\">click here</a>.</p>");
+        + "<a href=\"" + mainUrl + "?m=pr&rt=" + token + "\">click here</a>.</p>");
 
     return { status: "OK" };
 }
@@ -183,11 +196,13 @@ export async function userUsernameRecovery(args) { // FN: userUsernameRecovery
     }, false);
 
     var res = await $P.getRecord("users", "email", args.email);
-    if(res)
+    if(res) {
+        var mainUrl = await $P.configGet("mainUrl");
         await $P.sendEmail(cfg.email.autoAddress, args.email, "OctoberNet username recovery",
             "<p>The username associated with this email address is "
             + res.username + ". "
-            + "<a href=\"" + cfg.mainUrl + "\">Click here</a> to log in.</p>");
+            + "<a href=\"" + mainUrl + "\">Click here</a> to log in.</p>");
+    }
 
     return { status: "OK" }
 }
