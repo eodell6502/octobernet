@@ -5,7 +5,7 @@ import MDBWrapper from "./mdbwrapper.mjs";
 import minicle from "minicle";
 import { sha224 } from "js-sha256";
 
-var mdb;
+global.mdb = null;
 
 main();
 
@@ -238,7 +238,7 @@ async function mktbl(switches) {
         + "`username` varchar(64) NOT NULL, "
         + "`email` varchar(64) NOT NULL, "
         + "`password` varchar(64) NOT NULL, "
-        + "`type` enum('noob','user','admin') NOT NULL DEFAULT 'noob', "
+        + "`type` enum('noob','user','sysop') NOT NULL DEFAULT 'noob', "
         + "`loginToken` varchar(64) DEFAULT NULL, "
         + "`loginExpires` datetime DEFAULT NULL, "
         + "`verificationToken` varchar(64) DEFAULT NULL, "
@@ -284,7 +284,6 @@ async function mktbl(switches) {
         bbsUtcOffset:         { type: "integer", val: -6, sdesc: "Your offset from UTC." }, // TODO: timezone dropdown?
         sysopName:            { type: "string",  val: "Jane Doe", sdesc: "Your name (or pseudonym)." },
         sysopEmail:           { type: "string",  val: "jdoe@somedomain.net", sdesc: "Your email address." },
-
     };
 
     var q = "INSERT INTO `config` (`name`, `type`, `val`, `sdesc`) VALUES(?, ?, ?, ?)";
@@ -337,7 +336,7 @@ async function testdata(switches) {
     var q = "INSERT INTO `users` (`id`, `username`, `email`, `password`, `type`, `loginToken`, `loginExpires`, `verificationToken`, `verificationExpires`, `displayName`, `created`, `deleted`, `suspendedUntil`, `lastActive`) VALUES "
         + "(1, 'joe_noob', 'joe_noob@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'noob', NULL, '2023-02-01 19:41:02', NULL, NULL, 'Joe Noob', '2023-01-27 12:40:05', NULL, NULL, '2023-01-31 19:41:02'), "
         + "(2, 'joe_user', 'joe_user@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'user', NULL, NULL, NULL, NULL, 'Joe User', '2023-01-27 12:57:49', NULL, NULL, '2023-02-04 16:50:05'), "
-        + "(3, 'joe_admin', 'joe_admin@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'admin', NULL, '2023-02-01 19:41:02', NULL, NULL, 'Joe Admin', '2023-01-27 12:58:43', NULL, NULL, '2023-01-31 19:41:02'), "
+        + "(3, 'joe_sysop', 'joe_sysop@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'sysop', NULL, '2023-02-01 19:41:02', NULL, NULL, 'Joe Sysop', '2023-01-27 12:58:43', NULL, NULL, '2023-01-31 19:41:02'), "
         + "(4, 'joe_deleted', 'joe_deleted@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'user', NULL, NULL, NULL, NULL, 'Joe Deleted', '2023-01-27 12:59:40', '2023-01-27 12:59:41', NULL, NULL), "
         + "(5, 'joe_suspended', 'joe_suspended@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'user', NULL, NULL, NULL, NULL, 'Joe Suspended', '2023-01-27 13:00:31', NULL, '2024-01-27 13:00:34', NULL)";
     await mdb.exec(q);
@@ -361,51 +360,3 @@ async function help(switches) {
 }
 
 
-
--- --------------------------------------------------------
--- Host:                         192.168.1.140
--- Server version:               10.5.18-MariaDB-0+deb11u1 - Debian 11
--- Server OS:                    debian-linux-gnu
--- HeidiSQL Version:             12.3.0.6589
--- --------------------------------------------------------
-
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET NAMES utf8 */;
-/*!50503 SET NAMES utf8mb4 */;
-/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
-/*!40103 SET TIME_ZONE='+00:00' */;
-/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
-/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
-/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
-
-
--- Dumping database structure for octobernet
-CREATE DATABASE IF NOT EXISTS `octobernet` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
-USE `octobernet`;
-
--- Dumping structure for table octobernet.hosts
-CREATE TABLE IF NOT EXISTS `hosts` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `guid` varchar(64) DEFAULT NULL,
-  `name` varchar(64) DEFAULT NULL,
-  `sdesc` varchar(80) DEFAULT NULL,
-  `ldesc` text DEFAULT NULL,
-  `publicUrl` varchar(256) DEFAULT NULL,
-  `apiUrl` varchar(256) DEFAULT NULL,
-  `sysopName` varchar(64) DEFAULT NULL,
-  `sysopEmail` varchar(64) DEFAULT NULL,
-  `publicKey` text DEFAULT NULL,
-  `utcOffset` float DEFAULT NULL,
-  `updated` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `guid` (`guid`),
-  KEY `name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- Dumping data for table octobernet.hosts: ~0 rows (approximately)
-
-/*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
-/*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
-/*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40111 SET SQL_NOTES=IFNULL(@OLD_SQL_NOTES, 1) */;

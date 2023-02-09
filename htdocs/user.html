@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="us">
+<head>  <meta charset="utf-8">
+<title>OctoberNet: User Control Panel</title>
+<style type="text/css">
+
+div.shown  { display: block; }
+div.hidden { display: none; }
+
+</style>
+<script src="js/jquery-3.6.3.min.js"></script>
+<!-- <script src="js/GQuery.js"></script> -->
+<script type="module">
+import GQuery from "./js/GQuery.mjs";
+var apiUrl = "http://192.168.1.140/on";
+
+console.log("loginToken =", localStorage.loginToken);
+
+$(document).ready(function() {
+    $("#logoutLink").on("click", logout);
+});
+
+
+//==============================================================================
+
+async function logout() {
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userLogout", { _loginToken: localStorage.loginToken } );
+    localStorage.clear();
+    window.location = "index.html";
+}
+
+</script>
+</head><body>
+<h1>User Control Panel</h1>
+
+<p><span id="logoutLink">Log Out</span></p>
+
+</body>
+</html>

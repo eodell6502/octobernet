@@ -69,8 +69,10 @@ async function checkForLogin() { // FN: checkForLogin
 
     var g = new GQuery(apiUrl);
     var res = await g.req("userLoginCheck", { _loginToken: localStorage.loginToken });
-    if(res.loggedIn)
+    if(res.type == "user")
         window.location = "newsreader.html";
+    else if(res.type == "sysop")
+        window.location = "sysop.html";
 }
 
 //==============================================================================
@@ -116,7 +118,10 @@ async function login() { // FN: login
         localStorage.userEmail   = res.email;
         localStorage.displayName = res.displayName;
         localStorage.userType    = res.type;
-        window.location = "newsreader.html";
+        if(res.type == "sysop")
+            window.location = "sysop.html";
+        else
+            window.location = "newsreader.html";
     }
 
 }

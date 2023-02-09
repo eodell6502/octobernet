@@ -222,7 +222,6 @@ definition.
 
 Phase I - Login Module/Account Self-Management
 
-    * Mail templates
     * Email to config
     * Terms of Service
 

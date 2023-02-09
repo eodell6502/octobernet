@@ -51,7 +51,7 @@ export async function configGet(name) { // FN: configGet
 
 export async function configGetMulti(...keys) { // FN: configGetMulti
     var q = "SELECT name, type, val FROM config WHERE NAME IN (\"" +
-        ( keys.join("\", \"") + "\")";
+        keys.join("\", \"") + "\")";
     var res = await mdb.exec(q);
     var result = { };
 

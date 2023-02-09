@@ -8,7 +8,7 @@ export async function prepArgs(args, spec, loginRequired = true) {
     if(loginRequired) {
         if(args._loginToken === undefined)
             return { _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." };
-        user = $P.userLoad(args._loginToken);
+        user = await $P.userLoad(args._loginToken);
         if(user._errcode)
             return user;
     }

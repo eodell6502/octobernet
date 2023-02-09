@@ -67,7 +67,7 @@ export async function userLoginCheck(args) { // FN: userLoginCheck
     var [args, user] = await prepArgs(args, { }, true);
     if(args._errcode)
         return args;
-    return { loggedIn: true };
+    return { type: user.type };
 }
 
 
@@ -120,10 +120,10 @@ export async function userNoobCreate(args) { // FN: userNoobCreate
         return { _errcode: "DUPUSER", _errmsg: "User already exists." };
 
     var token = await $P.userVerificationTokenCreate(userId);
-    var mainUrl = await $P.configGet("mainUrl");
-    await $P.sendEmail(cfg.email.autoAddress, args.email, "New OctoberNet account",
-        "<p>To verify and begin using your new OctoberNet account, "
-        + "<a href=\"" + mainUrl + "?m=nu&vt=" + token + "\">click here</a>.</p>");
+    var k = await $P.configGetMulti("mainUrl", "bbsName");
+    await $P.sendEmail(cfg.email.autoAddress, args.email, "New " + k.bbsName + " account",
+        "<p>To verify and begin using your new " + k.bbsName + " account, "
+        + "<a href=\"" + k.mainUrl + "?m=nu&vt=" + token + "\">click here</a>.</p>");
 
     return { status: "OK" };
 }
@@ -177,11 +177,10 @@ export async function userResetRequest(args) { // FN: userResetRequest
         return { status: "OK" }
 
     var token = await $P.userResetTokenCreate(res.id);
-
-    var mainUrl = await $P.configGet("mainUrl");
-    await $P.sendEmail(cfg.email.autoAddress, args.email, "OctoberNet password reset request",
-        "<p>To reset the password of your OctoberNet account, "
-        + "<a href=\"" + mainUrl + "?m=pr&rt=" + token + "\">click here</a>.</p>");
+    var k = await $P.configGetMulti("mainUrl", "bbsName");
+    await $P.sendEmail(cfg.email.autoAddress, args.email, k.bbsName + " password reset request",
+        "<p>To reset the password of your " + k.bbsName + " account, "
+        + "<a href=\"" + k.mainUrl + "?m=pr&rt=" + token + "\">click here</a>.</p>");
 
     return { status: "OK" };
 }
@@ -197,11 +196,11 @@ export async function userUsernameRecovery(args) { // FN: userUsernameRecovery
 
     var res = await $P.getRecord("users", "email", args.email);
     if(res) {
-        var mainUrl = await $P.configGet("mainUrl");
-        await $P.sendEmail(cfg.email.autoAddress, args.email, "OctoberNet username recovery",
+        var k = await $P.configGetMulti("mainUrl", "bbsName");
+        await $P.sendEmail(cfg.email.autoAddress, args.email, k.bbName + " username recovery",
             "<p>The username associated with this email address is "
             + res.username + ". "
-            + "<a href=\"" + mainUrl + "\">Click here</a> to log in.</p>");
+            + "<a href=\"" + k.mainUrl + "\">Click here</a> to log in.</p>");
     }
 
     return { status: "OK" }
