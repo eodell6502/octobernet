@@ -18,8 +18,19 @@ console.log("loginToken =", localStorage.loginToken);
 
 $(document).ready(function() {
     $("#logoutLink").on("click", logout);
+    $("#usersLink").on("click", () => { xBlock("panel", "usersPanel"); });
+    $("#forumsLink").on("click", () => { xBlock("panel", "forumsPanel"); });
+    $("#hostsLink").on("click", () => { xBlock("panel", "hostsPanel"); });
+    $("#configLink").on("click", () => { xBlock("panel", "configPanel"); });
 });
 
+
+//==============================================================================
+
+function xBlock(classname, id) {
+    $("." + classname).addClass("hidden");
+    $("#" + id).removeClass("hidden");
+}
 
 //==============================================================================
 
@@ -30,19 +41,44 @@ async function logout() {
     window.location = "index.html";
 }
 
+
+
 </script>
 </head><body>
 <h1>Sysop Control Panel</h1>
 
-<p><span id="logoutLink">Log Out</span></p>
+<p>
+    <span id="usersLink">Users</span> |
+    <span id="forumsLink">Forums</span> |
+    <span id="hostsLink">Hosts</span> |
+    <span id="configLink">Config</span> |
+    <span id="logoutLink">Log Out</span>
+</p>
 
 <!-- User Editor -->
 
+<div class="panel" id="usersPanel">
+    <h2>User Manager</h2>
+</div>
+
 <!-- Forum Editor -->
+
+<div class="panel hidden" id="forumsPanel">
+    <h2>Forum Manager</h2>
+</div>
 
 <!-- Hosts Viewer -->
 
+<div class="panel hidden" id="hostsPanel">
+    <h2>Hosts Viewer</h2>
+</div>
+
 <!-- System Config -->
+
+<div class="panel hidden" id="configPanel">
+    <h2>System Configuration</h2>
+</div>
+
 
 </body>
 </html>

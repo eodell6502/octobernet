@@ -222,14 +222,15 @@ definition.
 
 Phase I - Login Module/Account Self-Management
 
-    * Email to config
-    * Terms of Service
+    * Flatten cfg structure
+    * Terms of Service  (defer)
 
 Phase II - Sysop Tools
 
     * User management
     * Configuration
     * Forum management
+    * Host viewer
     * Font selection, local vs. content network
 
 Phase III - User Tools

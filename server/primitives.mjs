@@ -211,13 +211,16 @@ export function randomHash() { // FN: randomHash
 
 export async function sendEmail(sender, recipient, subject, body) { // FN: sendEmail
 
+    var k = await configGetMulti("emailHost", "emailPort", "emailSecure",
+        "emailUsername", "emailPassword");
+
     var transporter = nodemailer.createTransport({
-        host:   cfg.email.host,
-        port:   cfg.email.port,
-        secure: cfg.email.secure,
+        host:   k.emailHost,
+        port:   k.emailPort,
+        secure: k.emailSecure,
         auth: {
-            user: cfg.email.username,
-            pass: cfg.email.password
+            user: k.emailUsername,
+            pass: k.emailPassword
         },
         tls: {
             rejectUnauthorized: false

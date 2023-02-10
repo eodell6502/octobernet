@@ -120,8 +120,8 @@ export async function userNoobCreate(args) { // FN: userNoobCreate
         return { _errcode: "DUPUSER", _errmsg: "User already exists." };
 
     var token = await $P.userVerificationTokenCreate(userId);
-    var k = await $P.configGetMulti("mainUrl", "bbsName");
-    await $P.sendEmail(cfg.email.autoAddress, args.email, "New " + k.bbsName + " account",
+    var k = await $P.configGetMulti("mainUrl", "bbsName", "emailAutoAddress");
+    await $P.sendEmail(k.emailAutoAddress, args.email, "New " + k.bbsName + " account",
         "<p>To verify and begin using your new " + k.bbsName + " account, "
         + "<a href=\"" + k.mainUrl + "?m=nu&vt=" + token + "\">click here</a>.</p>");
 
@@ -196,8 +196,8 @@ export async function userUsernameRecovery(args) { // FN: userUsernameRecovery
 
     var res = await $P.getRecord("users", "email", args.email);
     if(res) {
-        var k = await $P.configGetMulti("mainUrl", "bbsName");
-        await $P.sendEmail(cfg.email.autoAddress, args.email, k.bbName + " username recovery",
+        var k = await $P.configGetMulti("mainUrl", "bbsName", "emailAutoAddress");
+        await $P.sendEmail(k.emailAutoAddress, args.email, k.bbName + " username recovery",
             "<p>The username associated with this email address is "
             + res.username + ". "
             + "<a href=\"" + k.mainUrl + "\">Click here</a> to log in.</p>");

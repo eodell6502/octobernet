@@ -4,6 +4,7 @@ import { config as cfg } from "./config.mjs";
 import MDBWrapper from "./mdbwrapper.mjs";
 import minicle from "minicle";
 import { sha224 } from "js-sha256";
+import testdata from "./testdata.mjs";
 
 global.mdb = null;
 
@@ -70,7 +71,7 @@ async function main() {
             await mkuser(sw.switches);
             break;
         case "testdata":
-            await testdata(sw.switches);
+            await testdataProcess(sw.switches);
             break;
         default:
             minicle.errmsg("fatal", "No command supplied.");
@@ -284,6 +285,12 @@ async function mktbl(switches) {
         bbsUtcOffset:         { type: "integer", val: -6, sdesc: "Your offset from UTC." }, // TODO: timezone dropdown?
         sysopName:            { type: "string",  val: "Jane Doe", sdesc: "Your name (or pseudonym)." },
         sysopEmail:           { type: "string",  val: "jdoe@somedomain.net", sdesc: "Your email address." },
+        emailAutoAddress:     { type: "string", val: "sysop@mydomain.com", sdesc: "Origin address for auto email." },
+        emailHost:            { type: "string", val: "mail.mydomain.com", sdesc: "Domain name or address of email server." },
+        emailPort:            { type: "integer", val: 465, sdesc: "Port for email server." },
+        emailSecure:          { type: "boolean", val: "true", sdesc: "TODO: check Nodemailer docs." },
+        emailUsername:        { type: "string", val: "mailsysop", sdesc: "Username for email account." },
+        emailPassword:        { type: "string", val: "secret", sdesc: "Password for email account." },
     };
 
     var q = "INSERT INTO `config` (`name`, `type`, `val`, `sdesc`) VALUES(?, ?, ?, ?)";
@@ -328,18 +335,13 @@ async function mkuser(switches) {
 
 //==============================================================================
 
-async function testdata(switches) {
+async function testdataProcess(switches) {
 
     minicle.errmsg("info", "Creating test data...");
     await mdb.pool.query("USE `" + cfg.db.database + "`");
 
-    var q = "INSERT INTO `users` (`id`, `username`, `email`, `password`, `type`, `loginToken`, `loginExpires`, `verificationToken`, `verificationExpires`, `displayName`, `created`, `deleted`, `suspendedUntil`, `lastActive`) VALUES "
-        + "(1, 'joe_noob', 'joe_noob@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'noob', NULL, '2023-02-01 19:41:02', NULL, NULL, 'Joe Noob', '2023-01-27 12:40:05', NULL, NULL, '2023-01-31 19:41:02'), "
-        + "(2, 'joe_user', 'joe_user@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'user', NULL, NULL, NULL, NULL, 'Joe User', '2023-01-27 12:57:49', NULL, NULL, '2023-02-04 16:50:05'), "
-        + "(3, 'joe_sysop', 'joe_sysop@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'sysop', NULL, '2023-02-01 19:41:02', NULL, NULL, 'Joe Sysop', '2023-01-27 12:58:43', NULL, NULL, '2023-01-31 19:41:02'), "
-        + "(4, 'joe_deleted', 'joe_deleted@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'user', NULL, NULL, NULL, NULL, 'Joe Deleted', '2023-01-27 12:59:40', '2023-01-27 12:59:41', NULL, NULL), "
-        + "(5, 'joe_suspended', 'joe_suspended@kyrillia.com', '95c7fbca92ac5083afda62a564a3d014fc3b72c9140e3cb99ea6bf12', 'user', NULL, NULL, NULL, NULL, 'Joe Suspended', '2023-01-27 13:00:31', NULL, '2024-01-27 13:00:34', NULL)";
-    await mdb.exec(q);
+    for(var i = 0; i < testdata.length; i++)
+        await mdb.exec(testdata[i]);
 
     minicle.errmsg("info", "Test data creation completed.");
 }
