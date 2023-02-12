@@ -2,6 +2,25 @@ import { sha224 } from "js-sha256";
 import * as $P from "./primitives.mjs";
 import { prepArgs } from "./validator.mjs";
 
+//==============================================================================
+// Retrieves a single user record for display in the user editor.
+
+export async function userGet(args) { // FN: userGet
+    var [args, user] = await prepArgs(args, {
+        userId: { req: true, type: "Integer", min: 1, max: Infinity },
+    }, true);
+    if(args._errcode)
+        return args;
+    if(user.type != "sysop")
+        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
+
+    var user = await $P.getRecord("users", "id", args.userId);
+    if(user === undefined)
+        return { _errcode: "NOTFOUND", _errmsg: "User not found." };
+
+    return { user: user };
+}
+
 
 //==============================================================================
 // Given an identifier and its value, deterimines whether it already exists in
@@ -183,6 +202,87 @@ export async function userResetRequest(args) { // FN: userResetRequest
         + "<a href=\"" + k.mainUrl + "?m=pr&rt=" + token + "\">click here</a>.</p>");
 
     return { status: "OK" };
+}
+
+
+//==============================================================================
+// Retrieves users for display in the sysop module.
+
+export async function usersGet(args) { // FN: usersGet
+    var [args, user] = await prepArgs(args, {
+        type: { req: false,  type: "string", legal: ["noob", "user", "sysop"] },
+    }, true);
+    if(args._errcode)
+        return args;
+
+    if(user.type != "sysop")
+        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
+
+    var users = await $P.usersGet(args.type === undefined ? false : args.type);
+    return { users: users };
+}
+
+
+//==============================================================================
+// Updates the user record with the corresponding id or, if id == 0, creates a
+// new user.
+
+export async function userUpsert(args) { // FN: userUpdate
+    var [args, user] = await prepArgs(args, {
+        id:             { req: true, type: "integer", min: 0, max: Infinity },
+        username:       { req: true, type: "string", min: 1, max: 64, trim: true },
+        displayName:    { req: true, type: "string", min: 1, max: 64, trim: true },
+        email:          { req: true, type: "string", min: 1, max: 64, trim: true },
+        password:       { req: true, type: "string", min: 1, max: 64, nullable: true },
+        type:           { req: true, type: "string", legal: ["noob", "user", "sysop"] },
+        suspendedUntil: { req: true, type: "datetime", nullable: true },
+    }, true);
+    if(args._errcode)
+        return args;
+    if(user.type != "sysop")
+        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
+
+    // Check for collisions on username, displayName, and email. If id, exclude id.
+
+    if(await $P.userIdentifierExists("username", args.username, args.id))
+        return { _errcode: "DUPUSERNAME", _errmsg: "Username \"" + args.username + "\" is already in use." };
+    if(await $P.userIdentifierExists("displayName", args.displayName, args.id))
+        return { _errcode: "DUPDISPLAYNAME", _errmsg: "Display name \"" + args.displayName + "\" is already in use." };
+    if(await $P.userIdentifierExists("email", args.email, args.id))
+        return { _errcode: "DUPEMAIL", _errmsg: "Email \"" + args.email + "\" is already in use." };
+
+    // validate password rules
+
+    if(args.password !== null && !await $P.passwordIsValid(args.password)) {
+        var errmsg = await $P.passwordParamsDescribe();
+        return { _errcode: "BADPASSWORD", _errmsg: errmsg };
+    }
+
+    if(args.id == 0) { // new user
+        if(args.password === null)
+            return { _errcode: "BADPASSWORD", _errmsg: errmsg };
+        var userId = await $P.userNewCreate(args.username, args.email, shas224(args.password),
+            args.displayname, args.type);
+        if(userId == -1)
+            return { _errcode: "DUPUSER", _errmsg: "User already exists." };
+        else
+            return { userId: userId};
+    } else {           // existing user
+        var userId = args.id;
+        delete args.id;
+        if(args.password === null) {
+            delete args.password;
+        } else {
+            args.password = sha224(args.password);
+        }
+        var changed = await $P.updateRecordById("users", userId, args);
+        if(changed === undefined)
+            return { _errcode: "SYSERR", _errmsg: "Operation failed." };
+        else
+            return { changed: changed };
+    }
+
+
 }
 
 

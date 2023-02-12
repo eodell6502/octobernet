@@ -266,13 +266,13 @@ export async function updateRecordById(table, id, args) { // FN: updateRecordByI
         qargs.push(args[k]);
         assignments.push("`" + k + "` = ?");
     }
-    q = "UPDATE `" + table + "` SET "
+    var q = "UPDATE `" + table + "` SET "
         + assignments.join(", ")
-        + "WHERE id = ?";
+        + " WHERE id = ?";
     qargs.push(id);
 
     try {
-        await mdb.exec(q, qargs);
+        var res = await mdb.exec(q, qargs);
         return res.changedRows;
     } catch(e) {
         return undefined;
@@ -435,6 +435,23 @@ export async function userResetTokenCreate(userId) { // FN: userResetTokenCreate
     var verificationLifetime = await configGet("verificationLifetime");
     await mdb.exec(q, [token, verificationLifetime, userId]);
     return token;
+}
+
+
+//==============================================================================
+// Retrieves top-level details of users for display in the sysop module. If type
+// is specified, only that type will be returned.
+
+export async function usersGet(type = false) {
+    var legalTypes = ["noob", "user", "sysop"];
+    if(type && legalTypes.indexOf(type) == -1)
+        return [];
+    var q = "SELECT id, type, displayName, suspendedUntil, lastActive "
+        + "FROM users WHERE deleted IS NULL "
+        + (type ? "AND type = '" + type + "' " : "")
+        + "ORDER BY displayName";
+    var res = mdb.exec(q);
+    return res;
 }
 
 //==============================================================================

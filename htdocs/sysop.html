@@ -5,7 +5,7 @@
 <style type="text/css">
 
 div.shown  { display: block; }
-div.hidden { display: none; }
+.hidden { display: none; }
 
 </style>
 <script src="js/jquery-3.6.3.min.js"></script>
@@ -14,7 +14,12 @@ div.hidden { display: none; }
 import GQuery from "./js/GQuery.mjs";
 var apiUrl = "http://192.168.1.140/on";
 
-console.log("loginToken =", localStorage.loginToken);
+var pg = { // page global state
+    umgr: {
+        type: "all",
+        users: null,
+    }
+};
 
 $(document).ready(function() {
     $("#logoutLink").on("click", logout);
@@ -22,8 +27,16 @@ $(document).ready(function() {
     $("#forumsLink").on("click", () => { xBlock("panel", "forumsPanel"); });
     $("#hostsLink").on("click", () => { xBlock("panel", "hostsPanel"); });
     $("#configLink").on("click", () => { xBlock("panel", "configPanel"); });
-});
+    $("#umgrAll").on("click", () => { usersFilter("all"); });
+    $("#umgrNoobs").on("click", () => { usersFilter("noob"); });
+    $("#umgrUsers").on("click", () => { usersFilter("user"); });
+    $("#umgrSysops").on("click", () => { usersFilter("sysop"); });
+    $("#umgrRefresh").on("click", () => { usersLoad(); });
+    $("#umgrCancel").on("click", () => { document.userEditForm.reset(); });
+    $("#umgrSave").on("click", () => { userSave(); });
 
+    usersLoad();
+});
 
 //==============================================================================
 
@@ -41,6 +54,173 @@ async function logout() {
     window.location = "index.html";
 }
 
+//==============================================================================
+
+async function usersFilter(type) {
+    if(type !== undefined)
+        pg.umgr.type = type;
+
+    $("#umgrListBody tr").removeClass("hidden");
+    switch(pg.umgr.type) {
+        case "noob":
+            $("#umgrListBody tr.noob").removeClass("hidden");
+            $("#umgrListBody tr.user").addClass("hidden");
+            $("#umgrListBody tr.sysop").addClass("hidden");
+            break;
+        case "user":
+            $("#umgrListBody tr.noob").addClass("hidden");
+            $("#umgrListBody tr.user").removeClass("hidden");
+            $("#umgrListBody tr.sysop").addClass("hidden");
+            break;
+        case "sysop":
+            $("#umgrListBody tr.noob").addClass("hidden");
+            $("#umgrListBody tr.user").addClass("hidden");
+            $("#umgrListBody tr.sysop").removeClass("hidden");
+            break;
+        default:
+            return;
+    }
+}
+
+//==============================================================================
+
+async function usersLoad() {
+    var g = new GQuery(apiUrl);
+    var res = await g.req("usersGet", { _loginToken: localStorage.loginToken } );
+    pg.umgr.users = res.users;
+    var rows = [ ];
+    for(var i = 0; i < res.users.length; i++) {
+        var u = res.users[i];
+        rows.push(
+            "<tr class=\"uline " + u.type + "\" id=\"ul" + u.id + "\"><td>" + u.id + "</td>"
+            + "<td>" + u.type + "</td>"
+            + "<td>" + u.displayName + "</td>"
+            + "<td>" + u.lastActive + "</td>"
+            + "<td>" + u.suspendedUntil + "</td>"
+            + "</tr>"
+        );
+    }
+    $(".uline").off();
+    $("#umgrListBody").html(rows.join("\n"));
+    $(".uline").on("click", function() {
+        userLoad(parseInt(this.id.substr(2)));
+    });
+    usersFilter();
+}
+
+//==============================================================================
+
+async function userLoad(id) {
+    var g = new GQuery(apiUrl);
+    var res = await g.req("userGet", { _loginToken: localStorage.loginToken, userId: id } );
+    if(res._errmsg) {
+        alert(res._errmsg);
+        return;
+    }
+    var u = res.user;
+    document.userEditForm.id.value = u.id;
+    document.userEditForm.username.value = u.username;
+    document.userEditForm.displayName.value = u.displayName;
+    document.userEditForm.email.value = u.email;
+    document.userEditForm.type.value = u.type;
+    if(u.suspendedUntil) {
+        document.userEditForm.suspendedDate.value = u.suspendedUntil.substr(0, 10);
+        document.userEditForm.suspendedTime.value = u.suspendedUntil.substr(11, 5);
+    } else {
+        document.userEditForm.suspendedDate.value = "";
+        document.userEditForm.suspendedTime.value = "";
+    }
+    document.userEditForm.createdDate.value = u.created.substr(0, 10);
+    document.userEditForm.createdTime.value = u.created.substr(11, 5);
+    if(u.lastActive) {
+        document.userEditForm.lastActiveDate.value = u.lastActive.substr(0, 10);
+        document.userEditForm.lastActiveTime.value = u.lastActive.substr(11, 5);
+    } else {
+        document.userEditForm.lastActiveDate.value = "";
+        document.userEditForm.lastActiveTime.value = "";
+    }
+
+}
+
+//==============================================================================
+
+async function userSave(id) {
+
+    var user = {
+        id:             parseInt(document.userEditForm.id.value),
+        username:       document.userEditForm.username.value.trim(),
+        displayName:    document.userEditForm.displayName.value.trim(),
+        email:          document.userEditForm.email.value.trim(),
+        password:       document.userEditForm.password.value,
+        type:           document.userEditForm.type.value,
+        suspendedUntil: datetimeAssemble(document.userEditForm.suspendedDate.value, document.userEditForm.suspendedTime.value),
+    };
+
+    if(!user.username.length) {
+        $("#userError").html("A username must be supplied");
+        return;
+    }
+
+    if(!user.displayName.length) {
+        $("#userError").html("A display name must be supplied");
+        return;
+    }
+
+    if(!user.email.length) {
+        $("#userError").html("An email address must be supplied.");
+        return;
+    }
+
+    if(user.id) { // edit existing
+
+        // If a password is not supplied, it will not be updated.
+
+        if(user.password.length) {
+            if(user.password != document.userEditForm.password2.value) {
+                $("#userError").html("Passwords must match.");
+                return;
+            }
+        } else {
+            user.password = null;
+        }
+
+    } else {      // create new
+
+        // For new users, a password must be provided.
+
+        if(!user.password.length) {
+            $("#userError").html("A password must be supplied.");
+            return;
+        }
+
+        if(user.password != document.userEditForm.password2.value) {
+            $("#userError").html("Passwords must match.");
+            return;
+        }
+
+    }
+
+    var g = new GQuery(apiUrl);
+    user._loginToken = localStorage.loginToken;
+    var res = await g.req("userUpsert", user );
+    if(res._errcode) {
+        $("#userError").html(res._errmsg);
+        return;
+    }
+
+    document.userEditForm.reset();
+    await usersLoad();
+}
+
+
+//==============================================================================
+
+function datetimeAssemble(date, time) {
+    if(!date || !time)
+        return null;
+    else
+        return date + " " + time;
+}
 
 
 </script>
@@ -59,6 +239,52 @@ async function logout() {
 
 <div class="panel" id="usersPanel">
     <h2>User Manager</h2>
+
+    <div id="userPanel usersTable">
+
+        <button id="umgrAll">All</button>
+        <button id="umgrNoobs">Noobs</button>
+        <button id="umgrUsers">Users</button>
+        <button id="umgrSysops">Sysops</button>
+        <button id="umgrRefresh">Refresh</button>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Display Name</th>
+                    <th>Last Active</th>
+                    <th>Suspension</th>
+                </tr>
+            </thead>
+            <tbody id="umgrListBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="userPanel userEditor">
+        <div id="userError"></div>
+        <form name="userEditForm" id="userEditForm" onsubmit="return false;">
+            <input type="hidden" name="id">
+            Username:          <input type="text" name="username" size="20" maxlength="64"><br/>
+            Display Name:      <input type="text" name="displayName" size="20" maxlength="64"><br/>
+            Email:             <input type="text" name="email" size="20" maxlength="64"><br/>
+            Password:          <input type="password" name="password" size="20" maxlength="64"><br/>
+            Confirm:           <input type="password" name="password2" size="20" maxlength="64"><br/>
+            Type:              <select name="type">
+                                   <option value="noob">noob</option>
+                                   <option value="user">user</option>
+                                   <option value="sysop">sysop</option>
+                               </select><br/>
+            Suspended Until:   <input type="date" name="suspendedDate"> <input type="time" name="suspendedTime"><br/>
+            Created:           <input type="date" name="createdDate" readonly> <input type="time" name="createdTime" readonly><br/>
+            Last Active:       <input type="date" name="lastActiveDate" readonly> <input type="time" name="lastActiveTime" readonly><br/>
+            <button id="umgrSave">Save</button><br/>
+            <button id="umgrCancel">Cancel</button>
+        </form>
+    </div>
+
 </div>
 
 <!-- Forum Editor -->

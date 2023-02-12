@@ -13,6 +13,28 @@ named, unordered arguments. The object also usually contains a member named
 
 --------------------------------------------------------------------------------
 
+### `userGet`
+
+**Arguments:**
+
+| name         | status   | description                                                   |
+|--------------|----------|---------------------------------------------------------------|
+| `identifier` | required | Must be one of `"username"`, `"email"`, or `"displayName"`.   |
+| `value`      | required | A string containing the value to be matched.                  |
+| `userId`     | optional | The integer value of a user ID to exclude from consideration. |
+
+**Returns:**
+
+```javascript
+{
+    user: {
+        // complete user record
+    }
+}
+```
+
+--------------------------------------------------------------------------------
+
 ### `userIdentifierExists`
 
 Tests whether a user already exists with the specified username, email, or
@@ -144,6 +166,37 @@ reset request and sends an email with a reset link.
 | `email`       | optional | string, 1-64 characters |
 
 **Returns:** `{ status: "OK" }`
+
+--------------------------------------------------------------------------------
+
+### `usersGet`
+
+Retrieves partial details about user accounts for display in the sysop module.
+If the optional `type` argument is supplied, results will be restricted to that
+type.
+
+**Arguments:**
+
+| name      | status   | description                   |
+|-----------|----------|-------------------------------|
+| `type`    | optional | `"noob"`, `"user"`, `"sysop"` |
+
+**Returns:**
+
+```javascript
+{
+    users: [
+        {
+            id: 5,
+            type: "noob",
+            displayName: "Fred Noob",
+            suspendedUntil: null,
+            lastActive: "2023-03-04 12:45:21"
+        },
+        // ...
+    ]
+}
+```
 
 --------------------------------------------------------------------------------
 
@@ -343,6 +396,13 @@ Returns a boolean indicating success or failure.
 
 Generates a reset token for the supplied `userId` and updates the user
 record accordingly.
+
+--------------------------------------------------------------------------------
+
+### `async function usersGet(type = false)`
+
+Retrieves top-level details of users for display in the sysop module. If `type`
+is specified, only that type will be returned.
 
 --------------------------------------------------------------------------------
 

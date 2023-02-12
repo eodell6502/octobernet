@@ -7,14 +7,14 @@ export async function prepArgs(args, spec, loginRequired = true) {
     var user = false;
     if(loginRequired) {
         if(args._loginToken === undefined)
-            return { _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." };
+            return [{ _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." }, null];
         user = await $P.userLoad(args._loginToken);
         if(user._errcode)
-            return user;
+            return [ null, user ];
     }
     var args = validate(args, spec);
     if(args._errcode)
-        return args;
+        return [ args, null ];
    return [ args, user ];
 }
 
@@ -103,6 +103,12 @@ export function validate(rawArgs, spec) {
                     return { _errcode: "BADARG", _errmsg: k + " must be no more than " + spec[k].max + " characters long." };
                 if(spec[k].legal !== undefined && spec[k].legal.indexOf(args[k]) == -1)
                     return { _errcode: "BADARG", _errmsg: k + " must be one of: \"" + spec[k].legal.join("\", \"") + "\"." };
+                break;
+
+            case "datetime":
+                args[k] = args[k].toString().trim();
+                if(args[k].match(/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9](:[0-9][0-9])?/) === null)
+                    return { _errcode: "BADARG", _errmsg: k + " must follow the form `YYYY-MM-DD HH:MM(:SS)'." };
                 break;
         }
     }
