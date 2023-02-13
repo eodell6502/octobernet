@@ -118,6 +118,7 @@ async function userLoad(id) {
         return;
     }
     var u = res.user;
+    document.userEditForm.reset();
     document.userEditForm.id.value = u.id;
     document.userEditForm.username.value = u.username;
     document.userEditForm.displayName.value = u.displayName;
@@ -209,6 +210,7 @@ async function userSave(id) {
     }
 
     document.userEditForm.reset();
+    $("#userError").html("");
     await usersLoad();
 }
 
@@ -236,6 +238,8 @@ function datetimeAssemble(date, time) {
 </p>
 
 <!-- User Editor -->
+
+<hr/> <!-- tmp -->
 
 <div class="panel" id="usersPanel">
     <h2>User Manager</h2>
@@ -289,17 +293,23 @@ function datetimeAssemble(date, time) {
 
 <!-- Forum Editor -->
 
+<hr/> <!-- tmp -->
+
 <div class="panel hidden" id="forumsPanel">
     <h2>Forum Manager</h2>
 </div>
 
 <!-- Hosts Viewer -->
 
+<hr/> <!-- tmp -->
+
 <div class="panel hidden" id="hostsPanel">
     <h2>Hosts Viewer</h2>
 </div>
 
 <!-- System Config -->
+
+<hr/> <!-- tmp -->
 
 <div class="panel hidden" id="configPanel">
     <h2>System Configuration</h2>

@@ -275,6 +275,7 @@ export async function userUpsert(args) { // FN: userUpdate
         } else {
             args.password = sha224(args.password);
         }
+        console.log("ARGS", args);
         var changed = await $P.updateRecordById("users", userId, args);
         if(changed === undefined)
             return { _errcode: "SYSERR", _errmsg: "Operation failed." };

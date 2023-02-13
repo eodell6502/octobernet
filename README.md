@@ -222,7 +222,6 @@ definition.
 
 Phase I - Login Module/Account Self-Management
 
-    * Flatten cfg structure
     * Terms of Service  (defer)
 
 Phase II - Sysop Tools
@@ -231,12 +230,13 @@ Phase II - Sysop Tools
     * Configuration
     * Forum management
     * Host viewer
-    * Font selection, local vs. content network
+    * Tidying
 
 Phase III - User Tools
 
     * Account management
     * Newsreader
+    * Proper graphic design
 
     Once the basic BBS is functioning, we have a public beta release.
 
