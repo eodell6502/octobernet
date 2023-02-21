@@ -2,12 +2,81 @@ import { sha224 } from "js-sha256";
 import * as $P from "./primitives.mjs";
 import { prepArgs } from "./validator.mjs";
 
+
+//==============================================================================
+// Loads the config values as an object.
+
+export async function configLoad(args) { // FN: configLoad
+    var [args, user] = await prepArgs(args, {
+    }, true);
+    if(args._errcode)
+        return args;
+    if(user.type != "sysop")
+        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
+
+    var config = await $P.configLoad();
+
+    return { config: config };
+}
+
+
+//==============================================================================
+// Sets the config values.
+
+export async function configSave(args) { // FN: configSave
+    var [args, user] = await prepArgs(args, {
+        bbsApiUrl:            { req: true, type: "string", min: 0, max: 128, trim: true },
+        bbsGuid:              { req: true, type: "string", min: 1, max: 64, trim: true },
+        bbsLdesc:             { req: true, type: "string", min: 0, max: 1024, trim: true },
+        bbsName:              { req: true, type: "string", min: 1, max: 64, trim: true },
+        bbsPrivateKey:        { req: true, type: "string", min: 1, max: 8192, trim: true },
+        bbsPublicKey:         { req: true, type: "string", min: 1, max: 8192, trim: true },
+        bbsPublicUrl:         { req: true, type: "string", min: 0, max: 256, trim: true },
+        bbsSdesc:             { req: true, type: "string", min: 1, max: 80, trim: true },
+        bbsUtcOffset:         { req: true, type: "int", min: -12, max: 12 },
+        emailAutoAddress:     { req: true, type: "string", min: 1, max: 64, trim: true },
+        emailHost:            { req: true, type: "string", min: 1, max: 64, trim: true },
+        emailPassword:        { req: true, type: "string", min: 1, max: 64, trim: true },
+        emailPort:            { req: true, type: "uint", min: 0, max: 65535 },
+        emailSecure:          { req: true, type: "boolean" },
+        emailUsername:        { req: true, type: "string", min: 1, max: 64, trim: true },
+        mainUrl:              { req: true, type: "string",  min: 0, max: 256, trim: true },
+        maxFieldCount:        { req: true, type: "uint", min: 1, max: Infinity },
+        maxFieldSize:         { req: true, type: "uint", min: 1, max: Infinity },
+        maxFileCount:         { req: true, type: "uint", min: 1, max: Infinity },
+        maxFileSize:          { req: true, type: "uint", min: 1, max: Infinity },
+        port:                 { req: true, type: "uint", min: 0, max: 65535 },
+        pwdHasLowercase:      { req: true, type: "boolean" },
+        pwdHasNumbers:        { req: true, type: "boolean" },
+        pwdHasSpecialChars:   { req: true, type: "boolean" },
+        pwdHasUppercase:      { req: true, type: "boolean" },
+        pwdMinLength:         { req: true, type: "uint", min: 1, max: 64 },
+        sessionLifetime:      { req: true, type: "uint", min: 1, max: Infinity },
+        sysopEmail:           { req: true, type: "string", min: 1, max: 64, trim: true },
+        sysopName:            { req: true, type: "string", min: 1, max: 64, trim: true },
+        verificationLifetime: { req: true, type: "uint", min: 1, max: Infinity },
+    }, true);
+    if(args._errcode)
+        return args;
+    if(user.type != "sysop")
+        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
+
+    // TODO: considerably more validation.
+    // TODO: bulk configUpdate variant
+
+    for(var k in args)
+        await $P.configUpdate(k, args[k]);
+
+    return { status: "OK" };
+}
+
+
 //==============================================================================
 // Retrieves a single user record for display in the user editor.
 
 export async function userGet(args) { // FN: userGet
     var [args, user] = await prepArgs(args, {
-        userId: { req: true, type: "Integer", min: 1, max: Infinity },
+        userId: { req: true, type: "uint", min: 1, max: Infinity },
     }, true);
     if(args._errcode)
         return args;
@@ -83,7 +152,7 @@ export async function userLogin(args) { // FN: userLogin
 // Tests whether the current user is logged in, i.e., has a valid login token.
 
 export async function userLoginCheck(args) { // FN: userLoginCheck
-    var [args, user] = await prepArgs(args, { }, true);
+    var [args, user] = await prepArgs(args, { }, false);
     if(args._errcode)
         return args;
     return { type: user.type };
@@ -212,6 +281,7 @@ export async function usersGet(args) { // FN: usersGet
     var [args, user] = await prepArgs(args, {
         type: { req: false,  type: "string", legal: ["noob", "user", "sysop"] },
     }, true);
+
     if(args._errcode)
         return args;
 
@@ -229,7 +299,7 @@ export async function usersGet(args) { // FN: usersGet
 
 export async function userUpsert(args) { // FN: userUpdate
     var [args, user] = await prepArgs(args, {
-        id:             { req: true, type: "integer", min: 0, max: Infinity },
+        id:             { req: true, type: "uint",   min: 0, max: Infinity },
         username:       { req: true, type: "string", min: 1, max: 64, trim: true },
         displayName:    { req: true, type: "string", min: 1, max: 64, trim: true },
         email:          { req: true, type: "string", min: 1, max: 64, trim: true },

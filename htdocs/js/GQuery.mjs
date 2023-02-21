@@ -93,6 +93,13 @@ export class GQuery {
                 exectime: null, results: [ { _errcode: "BADRESPONSE",
                 _errmsg: "API response was not parseable." } ] };
         }
+
+        for(var i = 0; i < body.results.length; i++)
+            if(body.results[i]._errcode == "NOTLOGGEDIN") {
+                window.location = "index.html";
+                return;
+            }
+
         this.results  = body.results;
         this.worked   = body.worked;
         this.failed   = body.failed;
@@ -110,6 +117,12 @@ export class GQuery {
         this.reset();
         this.addCommand(cmd, args, id);
         await this.exec();
+
+        if(this.results[0]._errcode == "NOTLOGGEDIN") {
+            window.location = "index.html";
+            return;
+        }
+
         return this.results[0];
     }
 

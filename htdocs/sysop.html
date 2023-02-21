@@ -34,8 +34,10 @@ $(document).ready(function() {
     $("#umgrRefresh").on("click", () => { usersLoad(); });
     $("#umgrCancel").on("click", () => { document.userEditForm.reset(); });
     $("#umgrSave").on("click", () => { userSave(); });
+    $("#configSubmit").on("click", () => { configSave(); });
 
     usersLoad();
+    configLoad();
 });
 
 //==============================================================================
@@ -225,6 +227,85 @@ function datetimeAssemble(date, time) {
 }
 
 
+//==============================================================================
+
+async function configSave() {
+    var fields = [
+        "bbsApiUrl", "bbsGuid", "bbsLdesc", "bbsName", "bbsPrivateKey",
+        "bbsPublicKey", "bbsPublicUrl", "bbsSdesc", "bbsUtcOffset",
+        "emailAutoAddress", "emailHost", "emailPassword", "emailPort",
+        "emailUsername", "mainUrl", "maxFieldCount",
+        "maxFieldSize", "maxFileCount", "maxFileSize", "port",
+        "pwdMinLength", "sessionLifetime", "sysopEmail",
+        "sysopName", "verificationLifetime",
+    ];
+    var args = { _loginToken: localStorage.loginToken };
+    for(var f of fields)
+        args[f] = document.configForm[f].value;
+
+    var checkboxes = [ "emailSecure", "pwdHasLowercase", "pwdHasNumbers",
+        "pwdHasSpecialChars", "pwdHasUppercase" ];
+    for(var c of checkboxes)
+        args[c] = document.configForm[c].checked;
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("configSave", args );
+    if(res._errmsg) {
+        alert(res._errmsg);
+        return;
+    }
+
+}
+
+//==============================================================================
+
+async function configLoad() {
+
+    var g = new GQuery(apiUrl);
+    var res = await g.req("configLoad", { _loginToken: localStorage.loginToken } );
+    if(res._errmsg) {
+        alert(res._errmsg);
+        return;
+    }
+    res = res.config;
+
+    document.configForm.bbsApiUrl.value = res.bbsApiUrl;
+    document.configForm.bbsGuid.value = res.bbsGuid;
+    document.configForm.bbsLdesc.value = res.bbsLdesc;
+    document.configForm.bbsName.value = res.bbsName;
+    document.configForm.bbsPrivateKey.value = res.bbsPrivateKey;
+    document.configForm.bbsPublicKey.value = res.bbsPublicKey;
+    document.configForm.bbsPublicUrl.value = res.bbsPublicUrl;
+    document.configForm.bbsSdesc.value = res.bbsSdesc;
+    document.configForm.bbsUtcOffset.value = res.bbsUtcOffset;
+    document.configForm.emailAutoAddress.value = res.emailAutoAddress;
+    document.configForm.emailHost.value = res.emailHost;
+    document.configForm.emailPassword.value = res.emailPassword;
+    document.configForm.emailPort.value = res.emailPort;
+    document.configForm.emailSecure.checked = res.emailSecure;
+    document.configForm.emailUsername.value = res.emailUsername;
+    document.configForm.mainUrl.value = res.mainUrl;
+    document.configForm.maxFieldCount.value = res.maxFieldCount;
+    document.configForm.maxFieldSize.value = res.maxFieldSize;
+    document.configForm.maxFileCount.value = res.maxFileCount;
+    document.configForm.maxFileSize.value = res.maxFileSize;
+    document.configForm.port.value = res.port;
+    document.configForm.pwdHasLowercase.checked = res.pwdHasLowercase;
+    document.configForm.pwdHasNumbers.checked = res.pwdHasNumbers;
+    document.configForm.pwdHasSpecialChars.checked = res.pwdHasSpecialChars;
+    document.configForm.pwdHasUppercase.checked = res.pwdHasUppercase;
+    document.configForm.pwdMinLength.value = res.pwdMinLength;
+    document.configForm.sessionLifetime.value = res.sessionLifetime;
+    document.configForm.sysopEmail.value = res.sysopEmail;
+    document.configForm.sysopName.value = res.sysopName;
+    document.configForm.verificationLifetime.value = res.verificationLifetime;
+
+
+}
+
+
+
+
 </script>
 </head><body>
 <h1>Sysop Control Panel</h1>
@@ -293,15 +374,11 @@ function datetimeAssemble(date, time) {
 
 <!-- Forum Editor -->
 
-<hr/> <!-- tmp -->
-
 <div class="panel hidden" id="forumsPanel">
     <h2>Forum Manager</h2>
 </div>
 
 <!-- Hosts Viewer -->
-
-<hr/> <!-- tmp -->
 
 <div class="panel hidden" id="hostsPanel">
     <h2>Hosts Viewer</h2>
@@ -309,10 +386,70 @@ function datetimeAssemble(date, time) {
 
 <!-- System Config -->
 
-<hr/> <!-- tmp -->
-
 <div class="panel hidden" id="configPanel">
     <h2>System Configuration</h2>
+    <div id="configError"></div>
+    <form name="configForm" id="configForm" onsubmit="return false;">
+
+bbsApiUrl:             <input type="text" name="bbsApiUrl" size="40" maxlength="128"><br/>
+bbsGuid:               <input type="text" name="bbsGuid"   size="40" maxlength="64"><br/>
+bbsLdesc:              <textarea name="bbsLdesc"></textarea><br/>
+bbsName:               <input type="text" name="bbsName" size="40" maxlength="64"><br/>
+bbsPrivateKey:         <textarea name="bbsPrivateKey"></textarea><br/>
+bbsPublicKey:          <textarea name="bbsPublicKey"></textarea><br/>
+bbsPublicUrl:          <input type="text" name="bbsPublicUrl" size="40" maxlength="256"><br/>
+bbsSdesc:              <input type="text" name="bbsSdesc" size="40" maxlength="80"><br/>
+bbsUtcOffset:          <select name="bbsUtcOffset">
+                         <option value="-12">-12</option>
+                         <option value="-11">-11</option>
+                         <option value="-10">-10</option>
+                         <option value="-9">-9</option>
+                         <option value="-8">-8</option>
+                         <option value="-7">-7</option>
+                         <option value="-6">-6</option>
+                         <option value="-5">-5</option>
+                         <option value="-4">-4</option>
+                         <option value="-3">-3</option>
+                         <option value="-2">-2</option>
+                         <option value="-1">-1</option>
+                         <option value="0" selected>0</option>
+                         <option value="+1">+1</option>
+                         <option value="+2">+2</option>
+                         <option value="+3">+3</option>
+                         <option value="+4">+4</option>
+                         <option value="+5">+5</option>
+                         <option value="+6">+6</option>
+                         <option value="+7">+7</option>
+                         <option value="+8">+8</option>
+                         <option value="+9">+9</option>
+                         <option value="+10">+10</option>
+                         <option value="+11">+11</option>
+                         <option value="+12">+12</option>
+                      </select><br/>
+emailAutoAddress:      <input type="text" name="emailAutoAddress" size="40" maxlength="64"><br/>
+emailHost:             <input type="text" name="emailHost" size="40" maxlength="64"><br/>
+emailPassword:         <input type="text" name="emailPassword" size="40" maxlength="64"><br/>
+emailPort:             <input type="text" name="emailPort" size="5" maxlength="5"><br/>
+emailSecure:           <input type="checkbox" name="emailSecure"><br/>
+emailUsername:         <input type="text" name="emailUsername" size="40" maxlength="64"><br/>
+mainUrl:               <input type="text" name="mainUrl" size="40" maxlength="256"><br/>
+maxFieldCount:         <input type="text" name="maxFieldCount" size="20" maxlength="20"><br/>
+maxFieldSize:          <input type="text" name="maxFieldSize" size="20" maxlength="20"><br/>
+maxFileCount:          <input type="text" name="maxFileCount" size="20" maxlength="20"><br/>
+maxFileSize:           <input type="text" name="maxFileSize" size="20" maxlength="20"><br/>
+port:                  <input type="text" name="port" size="5" maxlength="5"><br/>
+pwdHasLowercase:       <input type="checkbox" name="pwdHasLowercase"><br/>
+pwdHasNumbers:         <input type="checkbox" name="pwdHasNumbers"><br/>
+pwdHasSpecialChars:    <input type="checkbox" name="pwdHasSpecialChars"><br/>
+pwdHasUppercase:       <input type="checkbox" name="pwdHasUppercase"><br/>
+pwdMinLength:          <input type="text" name="pwdMinLength" size="5" maxlength="5"><br/>
+sessionLifetime:       <input type="text" name="sessionLifetime" size="20" maxlength="20"><br/>
+sysopEmail:            <input type="text" name="sysopEmail" size="40" maxlength="64"><br/>
+sysopName:             <input type="text" name="sysopName" size="40" maxlength="64"><br/>
+verificationLifetime:  <input type="text" name="verificationLifetime" size="20" maxlength="20"><br/>
+<button id="configSubmit">Save</button>
+    </form>
+
 </div>
 
 

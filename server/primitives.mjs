@@ -4,9 +4,9 @@ import nodemailer from "nodemailer";
 
 
 //==============================================================================
-// Common type conversion routine for configGet and configLoad.
+// Common type conversion routine for configGet and configGetMulti.
 
-function _configConvert(type, val) { // FN: _configConvert
+function _configConvertLoad(type, val) { // FN: _configConvert
     if(val === null)
         return null;
     switch(type) {
@@ -40,7 +40,7 @@ function _configConvert(type, val) { // FN: _configConvert
 export async function configGet(name) { // FN: configGet
     var res = await mdb.exec("SELECT type, val FROM config WHERE name = ?", [name]);
     if(res.length)
-        return _configConvert(res[0].type, res[0].val);
+        return _configConvertLoad(res[0].type, res[0].val);
     else
         return undefined;
 }
@@ -56,7 +56,7 @@ export async function configGetMulti(...keys) { // FN: configGetMulti
     var result = { };
 
     for(var i = 0; i < res.length; i++)
-        result[res[i].name] = _configConvert(res[i].type, res[i].val);
+        result[res[i].name] = _configConvertLoad(res[i].type, res[i].val);
 
     return result;
 }
@@ -71,7 +71,7 @@ export async function configLoad() { // FN: configLoad
     var result = { };
 
     for(var i = 0; i < res.length; i++)
-        result[res[i].name] = _configConvert(res[i].type, res[i].val);
+        result[res[i].name] = _configConvertLoad(res[i].type, res[i].val);
 
     return result;
 }
@@ -82,8 +82,8 @@ export async function configLoad() { // FN: configLoad
 
 export async function configUpdate(name, value) { // FN: configUpdate
     if(typeof value == "object" && value !== null)
-        value = JSON.parse(value);
-    else if(typeof value == "number")
+        value = JSON.stringify(value);
+    else if(typeof value == "number" || typeof value == "boolean")
         value = value.toString();
     var q = "INSERT INTO config SET name = ?, val = ? "
         + "ON DUPLICATE KEY UPDATE val = ?";

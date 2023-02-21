@@ -10,7 +10,7 @@ export async function prepArgs(args, spec, loginRequired = true) {
             return [{ _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." }, null];
         user = await $P.userLoad(args._loginToken);
         if(user._errcode)
-            return [ null, user ];
+            return [{ _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." }, null];
     }
     var args = validate(args, spec);
     if(args._errcode)
@@ -63,6 +63,16 @@ export function validate(rawArgs, spec) {
 
         switch(spec[k].type) {
 
+            case "boolean":
+                if(typeof args[k] != "boolean") {
+                    if(args[k] == "true" || args[k] == 1)
+                        args[k] = true;
+                    else
+                        args[k] = false;
+                }
+                break;
+
+            case "integer":
             case "int":
                 args[k] == parseInt(args[k]);
                 if(isNaN(args[k]))

@@ -13,6 +13,62 @@ named, unordered arguments. The object also usually contains a member named
 
 --------------------------------------------------------------------------------
 
+### `configLoad`
+
+Returns the site config as an object. Only available to sysops.
+
+**Arguments:** none
+
+**Returns:**
+
+```javascript
+{
+    bbsApiUrl:            "https://somedomain.net/api",
+    bbsGuid:              "...",
+    bbsLdesc:             "An arbitrarily long description.",
+    bbsName:              "Your BBS Name",
+    bbsPrivateKey:        "... private ...",
+    bbsPublicKey:         "...",
+    bbsPublicUrl:         "https://somedomain.net/bbs",
+    bbsSdesc:             "A very short description.",
+    bbsUtcOffset:         -5,
+    emailAutoAddress:     "octobernet@kyrillia.com",
+    emailHost:            "mailbox.kyrillia.com",
+    emailPassword:        "SquonkVoofBell",
+    emailPort:            465,
+    emailSecure":         true,
+    emailUsername:        "octobernet@kyrillia.com",
+    mainUrl:              "http://192.168.1.140/",
+    maxFieldCount:        32,
+    maxFieldSize:         128000000,
+    maxFileCount:         64,
+    maxFileSize:          128000000,
+    port:                 8080,
+    pwdHasLowercase:      true,
+    pwdHasNumbers:        true,
+    pwdHasSpecialChars:   true,
+    pwdHasUppercase:      false,
+    pwdMinLength:         8,
+    sessionLifetime:      1440,
+    sysopEmail:           "jdoe@somedomain.net",
+    sysopName:            "Jane Doe",
+    verificationLifetime: 1440
+}
+```
+
+--------------------------------------------------------------------------------
+
+### `configSave`
+
+Writes the config object back to the database. Sysops only.
+
+**Arguments:** An object with all of the config k/v pairs.
+
+**Returns:** { status: "OK" }
+
+
+--------------------------------------------------------------------------------
+
 ### `userGet`
 
 **Arguments:**
