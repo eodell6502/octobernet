@@ -2,10 +2,25 @@
 <html lang="us">
 <head>  <meta charset="utf-8">
 <title>OctoberNet: Sysop Control Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
 <style type="text/css">
 
+body,table,input { font-family: Barlow; }
 div.shown  { display: block; }
 .hidden { display: none; }
+.formLabel { font-weight: 500; }
+
+table.gentable { border-spacing: 0px; white-space: nowrap; border: 1px solid black; }
+table.gentable thead { display: block; background-color: #4D4D4D; }
+table.gentable tbody { display: block; height: 500px; overflow-y: auto; overflow-x: hidden; }
+table.gentable th { color: white; font-weight: 500; }
+table.gentable td { padding-left: 0.5em; padding-right: 0.5em; }
+table.gentable th { padding-left: 0.5em; padding-right: 0.5em; }
+table.gentable tbody tr:nth-child(even) { background-color: #EEE; }
+
+#umgrUserList td { cursor: pointer; }
 
 </style>
 <script src="js/jquery-3.6.3.min.js"></script>
@@ -27,10 +42,8 @@ $(document).ready(function() {
     $("#forumsLink").on("click", () => { xBlock("panel", "forumsPanel"); });
     $("#hostsLink").on("click", () => { xBlock("panel", "hostsPanel"); });
     $("#configLink").on("click", () => { xBlock("panel", "configPanel"); });
-    $("#umgrAll").on("click", () => { usersFilter("all"); });
-    $("#umgrNoobs").on("click", () => { usersFilter("noob"); });
-    $("#umgrUsers").on("click", () => { usersFilter("user"); });
-    $("#umgrSysops").on("click", () => { usersFilter("sysop"); });
+    $("#newsreaderLink").on("click", () => { window.location = "newsreader.html"; });
+    $("#umgrFilter").on("change", function() { usersFilter(this.value); });
     $("#umgrRefresh").on("click", () => { usersLoad(); });
     $("#umgrCancel").on("click", () => { document.userEditForm.reset(); });
     $("#umgrSave").on("click", () => { userSave(); });
@@ -38,18 +51,20 @@ $(document).ready(function() {
 
     usersLoad();
     configLoad();
+    hostsLoad()
 });
+
 
 //==============================================================================
 
-function xBlock(classname, id) {
+function xBlock(classname, id) { // FN: xBlock
     $("." + classname).addClass("hidden");
     $("#" + id).removeClass("hidden");
 }
 
 //==============================================================================
 
-async function logout() {
+async function logout() { // FN: logout
     var g = new GQuery(apiUrl);
     var res = await g.req("userLogout", { _loginToken: localStorage.loginToken } );
     localStorage.clear();
@@ -58,7 +73,7 @@ async function logout() {
 
 //==============================================================================
 
-async function usersFilter(type) {
+async function usersFilter(type) { // FN: userFilter
     if(type !== undefined)
         pg.umgr.type = type;
 
@@ -86,7 +101,7 @@ async function usersFilter(type) {
 
 //==============================================================================
 
-async function usersLoad() {
+async function usersLoad() { // FN: usersLoad
     var g = new GQuery(apiUrl);
     var res = await g.req("usersGet", { _loginToken: localStorage.loginToken } );
     pg.umgr.users = res.users;
@@ -97,8 +112,8 @@ async function usersLoad() {
             "<tr class=\"uline " + u.type + "\" id=\"ul" + u.id + "\"><td>" + u.id + "</td>"
             + "<td>" + u.type + "</td>"
             + "<td>" + u.displayName + "</td>"
-            + "<td>" + u.lastActive + "</td>"
-            + "<td>" + u.suspendedUntil + "</td>"
+            + "<td>" + datetimeFormat(u.lastActive) + "</td>"
+            + "<td>" + datetimeFormat(u.suspendedUntil) + "</td>"
             + "</tr>"
         );
     }
@@ -108,11 +123,25 @@ async function usersLoad() {
         userLoad(parseInt(this.id.substr(2)));
     });
     usersFilter();
+
+    var $table = $("#umgrUserList"),
+        $bodyCells = $table.find('tbody tr:first').children(),
+        colWidth;
+    colWidth = $bodyCells.map(function() {
+        return $(this).width();
+    }).get();
+    $table.find('thead tr').children().each(function(i, v) {
+        $(v).width(colWidth[i]);
+    });
+
+    $("#umgrListBody").css("height", "400px");
+
 }
+
 
 //==============================================================================
 
-async function userLoad(id) {
+async function userLoad(id) { // FN: userLoad
     var g = new GQuery(apiUrl);
     var res = await g.req("userGet", { _loginToken: localStorage.loginToken, userId: id } );
     if(res._errmsg) {
@@ -147,7 +176,7 @@ async function userLoad(id) {
 
 //==============================================================================
 
-async function userSave(id) {
+async function userSave(id) { // FN: userSave
 
     var user = {
         id:             parseInt(document.userEditForm.id.value),
@@ -219,7 +248,7 @@ async function userSave(id) {
 
 //==============================================================================
 
-function datetimeAssemble(date, time) {
+function datetimeAssemble(date, time) { // FN: datetimeAssemble
     if(!date || !time)
         return null;
     else
@@ -229,7 +258,7 @@ function datetimeAssemble(date, time) {
 
 //==============================================================================
 
-async function configSave() {
+async function configSave() { // FN: configSave
     var fields = [
         "bbsApiUrl", "bbsGuid", "bbsLdesc", "bbsName", "bbsPrivateKey",
         "bbsPublicKey", "bbsPublicUrl", "bbsSdesc", "bbsUtcOffset",
@@ -259,7 +288,7 @@ async function configSave() {
 
 //==============================================================================
 
-async function configLoad() {
+async function configLoad() { // FN: configLoad
 
     var g = new GQuery(apiUrl);
     var res = await g.req("configLoad", { _loginToken: localStorage.loginToken } );
@@ -299,76 +328,180 @@ async function configLoad() {
     document.configForm.sysopEmail.value = res.sysopEmail;
     document.configForm.sysopName.value = res.sysopName;
     document.configForm.verificationLifetime.value = res.verificationLifetime;
-
-
 }
 
 
+//==============================================================================
+
+async function hostsLoad() { // FN: hostsLoad
+    var g = new GQuery(apiUrl);
+    var res = await g.req("hostsGet", { _loginToken: localStorage.loginToken } );
+    if(res._errmsg) {
+        alert(res._errmsg);
+        return;
+    }
+    var rows = [ ];
+    var host = res.hosts;
+    for(var i = 0; i < host.length; i++)
+        rows.push("<tr host-id='" + host[i].id + "'>"
+            + "<td>" + host[i].name + "</td>"
+            + "<td>" + host[i].sdesc + "</td>"
+            + "<td>" + host[i].updated + "</td>"
+            + "</tr>");
+    $("#hostListBody tr").off();
+    $("#hostListBody").html(rows.join("\n"));
+    $("#hostListBody tr").on("click", function() {
+        hostLoad($(this).attr("host-id"));
+    });
+}
+
+
+//==============================================================================
+
+async function hostLoad(id) { // FN: hostLoad
+    var g = new GQuery(apiUrl);
+    var res = await g.req("hostGet", { _loginToken: localStorage.loginToken, hostId: id } );
+    if(res._errmsg) {
+        alert(res._errmsg);
+        return;
+    }
+
+    var host = res.host;
+    $("#hostViewBody").html("<tr><th>Name:</th><td>" + host.name + "</td></tr>"
+        + "<tr><th>Sdesc:</th><td>" + host.sdesc + "</td></tr>"
+        + "<tr><th>Ldesc:</th><td>" + host.ldesc + "</td></tr>"
+        + "<tr><th>GUID:</th><td>" + host.guid + "</td></tr>"
+        + "<tr><th>Sysop:</th><td>" + host.sysopName + "</td></tr>"
+        + "<tr><th>Sysop Email:</th><td>" + host.sysopEmail + "</td></tr>"
+        + "<tr><th>Public URL:</th><td>" + host.publicUrl + "</td></tr>"
+        + "<tr><th>API URL:</th><td>" + host.apiUrl + "</td></tr>"
+        + "<tr><th>UTC Offset:</th><td>" + host.utcOffset + "</td></tr>"
+        + "<tr><th>Updated:</th><td>" + host.updated + "</td></tr>");
+}
+
+//==============================================================================
+
+function datetimeFormat(dt) { // FN: datetimeFormat
+    if(dt === null)
+        return "";
+    return dt.substr(0, 10) + " " + dt.substr(11, 5);
+}
 
 
 </script>
 </head><body>
-<h1>Sysop Control Panel</h1>
 
-<p>
-    <span id="usersLink">Users</span> |
-    <span id="forumsLink">Forums</span> |
-    <span id="hostsLink">Hosts</span> |
-    <span id="configLink">Config</span> |
-    <span id="logoutLink">Log Out</span>
-</p>
+<div style="border-bottom: 3px solid #C30; font-size: 24pt;">
+    <div style="color: #C30; font-weight: 800; display: inline-block; margin-right: 1em;">Octoberon</div>
+    <div style="font-weight: 500; display: inline-block;">Sysop Control Panel</div>
+    <div style="font-size: 12pt; display: inline-block; float: right; position: relative; top: 14px;">
+        <span id="newsreaderLink" style="cursor: pointer; font-weight: 500;">Newsreader</span>
+        <span style="margin-left: 0.3em; margin-right: 0.3em;">|</span>
+        <span id="logoutLink" style="cursor: pointer; font-weight: 500;">Log Out</span>
+    </div>
+</div>
+
+
+
+<div style="font-size: 14pt; padding-left: 1em; border-bottom: 1px solid black; margin-top: 5px; padding-bottom: 7px;">
+    <span id="usersLink" style="cursor: pointer;">Users</span>
+    <span style="margin-left: 0.3em; margin-right: 0.3em;">|</span>
+    <span id="forumsLink" style="cursor: pointer;">Forums</span>
+    <span style="margin-left: 0.3em; margin-right: 0.3em;">|</span>
+    <span id="hostsLink" style="cursor: pointer;">Hosts</span>
+    <span style="margin-left: 0.3em; margin-right: 0.3em;">|</span>
+    <span id="configLink" style="cursor: pointer;">Config</span>
+</div>
 
 <!-- User Editor -->
 
-<hr/> <!-- tmp -->
 
-<div class="panel" id="usersPanel">
+
+<div class="panel" id="usersPanel" style="margin-left: 30px;">
     <h2>User Manager</h2>
 
-    <div id="userPanel usersTable">
+    <table id="userEditor">
+        <tr>
+            <td style="vertical-align: top; padding-right: 2em;">
 
-        <button id="umgrAll">All</button>
-        <button id="umgrNoobs">Noobs</button>
-        <button id="umgrUsers">Users</button>
-        <button id="umgrSysops">Sysops</button>
-        <button id="umgrRefresh">Refresh</button>
+                Show: <select id="umgrFilter">
+                    <option value="all">All Users</option>
+                    <option value="noob">Noobs</option>
+                    <option value="user">Users</option>
+                    <option value="sysop">Sysop</option>
+                </select>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Type</th>
-                    <th>Display Name</th>
-                    <th>Last Active</th>
-                    <th>Suspension</th>
-                </tr>
-            </thead>
-            <tbody id="umgrListBody">
-            </tbody>
-        </table>
-    </div>
+                <button id="umgrRefresh" style="float: right; margin-right: 18px;">Refresh</button>
 
-    <div id="userPanel userEditor">
-        <div id="userError"></div>
-        <form name="userEditForm" id="userEditForm" onsubmit="return false;">
-            <input type="hidden" name="id">
-            Username:          <input type="text" name="username" size="20" maxlength="64"><br/>
-            Display Name:      <input type="text" name="displayName" size="20" maxlength="64"><br/>
-            Email:             <input type="text" name="email" size="20" maxlength="64"><br/>
-            Password:          <input type="password" name="password" size="20" maxlength="64"><br/>
-            Confirm:           <input type="password" name="password2" size="20" maxlength="64"><br/>
-            Type:              <select name="type">
+                <br/>
+
+                <table id="umgrUserList" class="gentable" style="margin-top: 4px;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Display Name</th>
+                            <th>Last Active</th>
+                            <th>Suspension</th>
+                        </tr>
+                    </thead>
+                    <tbody id="umgrListBody">
+                    </tbody>
+                </table>
+
+            </td><td style="vertical-align: top; padding-top: 12px;">
+
+                <form name="userEditForm" id="userEditForm" onsubmit="return false;">
+                    <input type="hidden" name="id">
+                    <table>
+                        <tr>
+                            <td colspan="2" id="userError"></td>
+                        </tr><tr>
+                            <td class="formLabel">Username:</td>
+                            <td><input type="text" name="username" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Display Name:</td>
+                            <td><input type="text" name="displayName" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Email:</td>
+                            <td><input type="text" name="email" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Password:</td>
+                            <td><input type="password" name="password" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Confirm:</td>
+                            <td><input type="password" name="password2" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Type:</td>
+                            <td><select name="type">
                                    <option value="noob">noob</option>
                                    <option value="user">user</option>
                                    <option value="sysop">sysop</option>
-                               </select><br/>
-            Suspended Until:   <input type="date" name="suspendedDate"> <input type="time" name="suspendedTime"><br/>
-            Created:           <input type="date" name="createdDate" readonly> <input type="time" name="createdTime" readonly><br/>
-            Last Active:       <input type="date" name="lastActiveDate" readonly> <input type="time" name="lastActiveTime" readonly><br/>
-            <button id="umgrSave">Save</button><br/>
-            <button id="umgrCancel">Cancel</button>
-        </form>
-    </div>
+                               </select></td>
+                        </tr><tr>
+                            <td class="formLabel">Suspended Until:</td>
+                            <td><input type="date" name="suspendedDate"> <input type="time" name="suspendedTime"></td>
+                        </tr><tr>
+                            <td class="formLabel">Created:</td>
+                            <td><input type="date" name="createdDate" readonly> <input type="time" name="createdTime" readonly></td>
+                        </tr><tr>
+                            <td class="formLabel">Last Active:</td>
+                            <td><input type="date" name="lastActiveDate" readonly> <input type="time" name="lastActiveTime" readonly></td>
+                        </tr><tr>
+                            <td></td>
+                            <td style="text-align: center;">
+                                <button id="umgrSave">Save</button>
+                                <button id="umgrCancel">Cancel</button>
+                            </td>
+                        </tr><tr>
+                    </table>
+                </form>
+
+
+
+            </td>
+        </tr>
+    </table>
 
 </div>
 
@@ -382,24 +515,61 @@ async function configLoad() {
 
 <div class="panel hidden" id="hostsPanel">
     <h2>Hosts Viewer</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Updated</th>
+            </tr>
+        </thead>
+        <tbody id="hostListBody">
+        </tbody>
+    </table>
+
+    <table>
+        <tbody id="hostViewBody">
+        </tbody>
+    </table>
+
 </div>
 
 <!-- System Config -->
 
-<div class="panel hidden" id="configPanel">
+<div class="panel hidden" id="configPanel" style="margin-left: 30px;">
     <h2>System Configuration</h2>
     <div id="configError"></div>
     <form name="configForm" id="configForm" onsubmit="return false;">
-
-bbsApiUrl:             <input type="text" name="bbsApiUrl" size="40" maxlength="128"><br/>
-bbsGuid:               <input type="text" name="bbsGuid"   size="40" maxlength="64"><br/>
-bbsLdesc:              <textarea name="bbsLdesc"></textarea><br/>
-bbsName:               <input type="text" name="bbsName" size="40" maxlength="64"><br/>
-bbsPrivateKey:         <textarea name="bbsPrivateKey"></textarea><br/>
-bbsPublicKey:          <textarea name="bbsPublicKey"></textarea><br/>
-bbsPublicUrl:          <input type="text" name="bbsPublicUrl" size="40" maxlength="256"><br/>
-bbsSdesc:              <input type="text" name="bbsSdesc" size="40" maxlength="80"><br/>
-bbsUtcOffset:          <select name="bbsUtcOffset">
+        <table>
+            <tr>
+                <td class="formLabel">bbsApiUrl:</td>
+                <td><input type="text" name="bbsApiUrl" size="40" maxlength="128"></td>
+            </tr><tr>
+                <td class="formLabel">bbsGuid:</td>
+                <td><input type="text" name="bbsGuid"   size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">bbsLdesc:</td>
+                <td><textarea name="bbsLdesc"></textarea></td>
+            </tr><tr>
+                <td class="formLabel">bbsName:</td>
+                <td><input type="text" name="bbsName" size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">bbsPrivateKey:</td>
+                <td><textarea name="bbsPrivateKey"></textarea></td>
+            </tr><tr>
+                <td class="formLabel">bbsPublicKey:</td>
+                <td><textarea name="bbsPublicKey"></textarea></td>
+            </tr><tr>
+                <td class="formLabel">bbsPublicUrl:</td>
+                <td><input type="text" name="bbsPublicUrl" size="40" maxlength="256"></td>
+            </tr><tr>
+                <td class="formLabel">bbsSdesc:</td>
+                <td><input type="text" name="bbsSdesc" size="40" maxlength="80"></td>
+            </tr><tr>
+                <td class="formLabel">bbsUtcOffset:</td>
+                <td>
+                    <select name="bbsUtcOffset">
                          <option value="-12">-12</option>
                          <option value="-11">-11</option>
                          <option value="-10">-10</option>
@@ -425,29 +595,76 @@ bbsUtcOffset:          <select name="bbsUtcOffset">
                          <option value="+10">+10</option>
                          <option value="+11">+11</option>
                          <option value="+12">+12</option>
-                      </select><br/>
-emailAutoAddress:      <input type="text" name="emailAutoAddress" size="40" maxlength="64"><br/>
-emailHost:             <input type="text" name="emailHost" size="40" maxlength="64"><br/>
-emailPassword:         <input type="text" name="emailPassword" size="40" maxlength="64"><br/>
-emailPort:             <input type="text" name="emailPort" size="5" maxlength="5"><br/>
-emailSecure:           <input type="checkbox" name="emailSecure"><br/>
-emailUsername:         <input type="text" name="emailUsername" size="40" maxlength="64"><br/>
-mainUrl:               <input type="text" name="mainUrl" size="40" maxlength="256"><br/>
-maxFieldCount:         <input type="text" name="maxFieldCount" size="20" maxlength="20"><br/>
-maxFieldSize:          <input type="text" name="maxFieldSize" size="20" maxlength="20"><br/>
-maxFileCount:          <input type="text" name="maxFileCount" size="20" maxlength="20"><br/>
-maxFileSize:           <input type="text" name="maxFileSize" size="20" maxlength="20"><br/>
-port:                  <input type="text" name="port" size="5" maxlength="5"><br/>
-pwdHasLowercase:       <input type="checkbox" name="pwdHasLowercase"><br/>
-pwdHasNumbers:         <input type="checkbox" name="pwdHasNumbers"><br/>
-pwdHasSpecialChars:    <input type="checkbox" name="pwdHasSpecialChars"><br/>
-pwdHasUppercase:       <input type="checkbox" name="pwdHasUppercase"><br/>
-pwdMinLength:          <input type="text" name="pwdMinLength" size="5" maxlength="5"><br/>
-sessionLifetime:       <input type="text" name="sessionLifetime" size="20" maxlength="20"><br/>
-sysopEmail:            <input type="text" name="sysopEmail" size="40" maxlength="64"><br/>
-sysopName:             <input type="text" name="sysopName" size="40" maxlength="64"><br/>
-verificationLifetime:  <input type="text" name="verificationLifetime" size="20" maxlength="20"><br/>
-<button id="configSubmit">Save</button>
+                      </select>
+                  </td>
+            </tr><tr>
+                <td class="formLabel">emailAutoAddress:</td>
+                <td><input type="text" name="emailAutoAddress" size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">emailHost:</td>
+                <td><input type="text" name="emailHost" size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">emailPassword:</td>
+                <td><input type="text" name="emailPassword" size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">emailPort:</td>
+                <td><input type="text" name="emailPort" size="5" maxlength="5"></td>
+            </tr><tr>
+                <td class="formLabel">emailSecure:</td>
+                <td><input type="checkbox" name="emailSecure"></td>
+            </tr><tr>
+                <td class="formLabel">emailUsername:</td>
+                <td><input type="text" name="emailUsername" size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">mainUrl:</td>
+                <td><input type="text" name="mainUrl" size="40" maxlength="256"></td>
+            </tr><tr>
+                <td class="formLabel">maxFieldCount:</td>
+                <td><input type="text" name="maxFieldCount" size="20" maxlength="20"></td>
+            </tr><tr>
+                <td class="formLabel">maxFieldSize:</td>
+                <td><input type="text" name="maxFieldSize" size="20" maxlength="20"></td>
+            </tr><tr>
+                <td class="formLabel">maxFileCount:</td>
+                <td><input type="text" name="maxFileCount" size="20" maxlength="20"></td>
+            </tr><tr>
+                <td class="formLabel">maxFileSize:</td>
+                <td><input type="text" name="maxFileSize" size="20" maxlength="20"></td>
+            </tr><tr>
+                <td class="formLabel">port:</td>
+                <td><input type="text" name="port" size="5" maxlength="5"></td>
+            </tr><tr>
+                <td class="formLabel">pwdHasLowercase:</td>
+                <td><input type="checkbox" name="pwdHasLowercase"></td>
+            </tr><tr>
+                <td class="formLabel">pwdHasNumbers:</td>
+                <td><input type="checkbox" name="pwdHasNumbers"></td>
+            </tr><tr>
+                <td class="formLabel">pwdHasSpecialChars:</td>
+                <td><input type="checkbox" name="pwdHasSpecialChars"></td>
+            </tr><tr>
+                <td class="formLabel">pwdHasUppercase:</td>
+                <td><input type="checkbox" name="pwdHasUppercase"></td>
+            </tr><tr>
+                <td class="formLabel">pwdMinLength:</td>
+                <td><input type="text" name="pwdMinLength" size="5" maxlength="5"></td>
+            </tr><tr>
+                <td class="formLabel">sessionLifetime:</td>
+                <td><input type="text" name="sessionLifetime" size="20" maxlength="20"></td>
+            </tr><tr>
+                <td class="formLabel">sysopEmail:</td>
+                <td><input type="text" name="sysopEmail" size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">sysopName:</td>
+                <td><input type="text" name="sysopName" size="40" maxlength="64"></td>
+            </tr><tr>
+                <td class="formLabel">verificationLifetime:</td>
+                <td><input type="text" name="verificationLifetime" size="20" maxlength="20"></td>
+            </tr><tr>
+                <td></td>
+                <td><button id="configSubmit">Save</button:</td>
+            </tr>
+        </table>
     </form>
 
 </div>

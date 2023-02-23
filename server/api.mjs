@@ -8,14 +8,10 @@ import { prepArgs } from "./validator.mjs";
 
 export async function configLoad(args) { // FN: configLoad
     var [args, user] = await prepArgs(args, {
-    }, true);
+    }, "sysop");
     if(args._errcode)
         return args;
-    if(user.type != "sysop")
-        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
-
     var config = await $P.configLoad();
-
     return { config: config };
 }
 
@@ -55,11 +51,9 @@ export async function configSave(args) { // FN: configSave
         sysopEmail:           { req: true, type: "string", min: 1, max: 64, trim: true },
         sysopName:            { req: true, type: "string", min: 1, max: 64, trim: true },
         verificationLifetime: { req: true, type: "uint", min: 1, max: Infinity },
-    }, true);
+    }, "sysop");
     if(args._errcode)
         return args;
-    if(user.type != "sysop")
-        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
 
     // TODO: considerably more validation.
     // TODO: bulk configUpdate variant
@@ -72,16 +66,42 @@ export async function configSave(args) { // FN: configSave
 
 
 //==============================================================================
+// Retrieves the full details of a host.
+
+export async function hostGet(args) { // FN: hostGet
+    var [args, user] = await prepArgs(args, {
+        hostId: { req: true, type: "uint", min: 1, max: Infinity },
+    }, "user");
+
+    var host = await $P.getRecord("hosts", "id", args.hostId);
+
+    return { host: host };
+}
+
+
+//==============================================================================
+// Retrieves a list of hosts to display in the hosts viewer.
+
+export async function hostsGet(args) { // FN: hostsGet
+    var [args, user] = await prepArgs(args, {
+        userId: { req: true, type: "uint", min: 1, max: Infinity },
+    }, "user");
+
+    var hosts = await $P.hostsGet(["id", "name", "sdesc", "updated"], "name");
+
+    return { hosts: hosts };
+}
+
+
+//==============================================================================
 // Retrieves a single user record for display in the user editor.
 
 export async function userGet(args) { // FN: userGet
     var [args, user] = await prepArgs(args, {
         userId: { req: true, type: "uint", min: 1, max: Infinity },
-    }, true);
+    }, "sysop");
     if(args._errcode)
         return args;
-    if(user.type != "sysop")
-        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
 
     var user = await $P.getRecord("users", "id", args.userId);
     if(user === undefined)
@@ -309,8 +329,6 @@ export async function userUpsert(args) { // FN: userUpdate
     }, true);
     if(args._errcode)
         return args;
-    if(user.type != "sysop")
-        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
 
     // Check for collisions on username, displayName, and email. If id, exclude id.
 

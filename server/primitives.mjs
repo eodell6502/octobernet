@@ -109,6 +109,21 @@ export async function getRecord(table, field, value) { // FN: getRecord
 
 
 //==============================================================================
+// Retrieves the fields in the fields array, sorted by the field in orderBy.
+
+export async function hostsGet(fields, orderBy) { // FN: hostsGet
+    var q = "SELECT `" + fields.join("`, `") + "` FROM hosts "
+        + "ORDER BY + `" + orderBy + "`";
+    try {
+        var res = await mdb.exec(q);
+        return res;
+    } catch(e) {
+        return [];
+    }
+}
+
+
+//==============================================================================
 // Inserts a record in the named table using the supplied args. Returns the new
 // ID or undefined if an error occurred. Of course, this presumes an auto-
 // increment primary key and that all required columns are provided in args.

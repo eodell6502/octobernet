@@ -7,9 +7,9 @@ Phase II - Sysop Tools
 
     * User management       (core done)
     * Configuration         (core done)
-    * Host viewer
+    * Host viewer           (core done)
     * Forum management
-    * Tidying
+    * Tidying               (...)
 
 Phase III - User Tools
 

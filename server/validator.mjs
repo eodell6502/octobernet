@@ -3,7 +3,7 @@ import * as $P from "./primitives.mjs";
 
 //==============================================================================
 
-export async function prepArgs(args, spec, loginRequired = true) {
+export async function prepArgs(args, spec, loginRequired = "user") {
     var user = false;
     if(loginRequired) {
         if(args._loginToken === undefined)
@@ -12,6 +12,10 @@ export async function prepArgs(args, spec, loginRequired = true) {
         if(user._errcode)
             return [{ _errcode: "NOTLOGGEDIN", _errmsg: "User is not logged in." }, null];
     }
+
+    if((loginRequired == "sysop" && user.type != "sysop") || (loginRequired == "user" && user.type == "noob"))
+        return { _errcode: "UNAUTHORIZED", _errmsg: "Current user is not authorized to perform this action." };
+
     var args = validate(args, spec);
     if(args._errcode)
         return [ args, null ];
