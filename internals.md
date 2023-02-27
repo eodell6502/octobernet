@@ -69,6 +69,43 @@ Writes the config object back to the database. Sysops only.
 
 --------------------------------------------------------------------------------
 
+### `forumsGet`
+
+Retrieves a list of forums to display in the forum editor.
+
+**Arguments:** none
+
+**Returns:**
+
+```javascript
+{
+    forums: [
+        {
+            id: 232,
+            federation: "OctoberNet",
+            name: "talk.music.disco",
+            sdesc: "Discussion of disco music",
+            admin: 0
+        },
+        // ...
+    ]
+}
+```
+
+--------------------------------------------------------------------------------
+
+### `hostGet`
+
+TODO
+
+--------------------------------------------------------------------------------
+
+### `hostsGet`
+
+TODO
+
+--------------------------------------------------------------------------------
+
 ### `userGet`
 
 **Arguments:**
@@ -256,6 +293,32 @@ type.
 
 --------------------------------------------------------------------------------
 
+### `userUpsert`
+
+Updates the user record with the corresponding id or, if id == 0 or newUser
+is true, creates a new user.
+
+**Arguments:**
+
+| name             | status   | description                      |
+|------------------|----------|----------------------------------|
+| `id`             | required | uint                             |
+| `username`       | required | string, 1-64 chars               |
+| `displayName`    | required | string, 1-64 chars               |
+| `email`          | required | string, 1-64 chars               |
+| `password`       | required | string, 1-64 chars, or null      |
+| `type`           | required | `"noob"`, `"user"`, or `"sysop"` |
+| `suspendedUntil` | required | datetime or null                 |
+| `newUser`        | optional | boolean                          |
+
+**Returns:**
+
+```javascript
+{ userId: 324 }  // if inserting
+{ changed: 1 }   // if updating
+```
+--------------------------------------------------------------------------------
+
 ### `userUsernameRecovery`
 
 When a user can't remember their username, they can enter their email address
@@ -314,6 +377,14 @@ as it goes. Returns the resulting object.
 ### `async function configUpdate(name, value)`
 
 Writes a key-value pair to the `config` table.
+
+--------------------------------------------------------------------------------
+
+### `async function forumsGet()`
+
+Returns a list of all forums for display in the sysop forum manager. Fields
+returned include `id`, `federation`, `name`, `sdesc`, and `admin`. Results are
+sorted by federation name and then forum name.
 
 --------------------------------------------------------------------------------
 

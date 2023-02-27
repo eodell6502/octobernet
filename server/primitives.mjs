@@ -94,6 +94,104 @@ export async function configUpdate(name, value) { // FN: configUpdate
 
 
 //==============================================================================
+// Returns a boolean indicating whether the supplied federation id is valid.
+
+export async function federationExists(id) { // FN: federationExists
+    var q = "SELECT COUNT(*) AS cnt FROM federations WHERE id = ?";
+    var exists = await mdb.firstField(q, [id]);
+    return exists ? true : false;
+}
+
+
+//==============================================================================
+// Returns a list of all federations.
+
+export async function federationsGet() { // FN: federationsGet
+    var q = "SELECT * FROM federations ORDER BY name";
+    var res = await mdb.exec(q);
+    return res;
+}
+
+
+//==============================================================================
+// Returns a boolean indicating whether the supplied identifier --- currently,
+// "guid" is the only option --- already exists. If a forum ID is passed, that
+// record will be ignored.
+
+export async function forumIdentifierExists(identifier, value, forumId = 0) { // FN: forumIdentifierExists
+if(["guid"].indexOf(identifier) == -1)
+        return false;
+    var qargs = [ value ];
+    var q = "SELECT COUNT(*) AS cnt FROM forums WHERE " + identifier + " = ?";
+    if(forumId) {
+        q += " AND id != ?";
+        qargs.push(forumId);
+    }
+    var cnt = await mdb.firstField(q, qargs)
+    return cnt ? true : false;
+}
+
+
+//==============================================================================
+// Creates a new forum from an object containing the forum's values.
+
+export async function forumNewCreate(forum) { // FN: forumNewCreate
+    var q = "INSERT INTO forums SET guid = ?, federationId = ?, name = ?, "
+        + "sdesc = ?, ldesc = ?, tos = ?, origin = ?, parent = ?, moderator = ?, "
+        + "maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
+        + "binaryTypes = ?, commercial = ?, admin = ?, advertise = ?, "
+        + "scripts = ?";
+   try {
+       var res = await mdb.exec(q, [forum.guid, forum.federationId, forum.name,
+        forum.sdesc, forum.ldesc, forum.tos, forum.origin, forum.parent,
+        forum.moderator, forum.maxSize, forum.binariesAttached,
+        forum.binariesEmbedded, forum.binaryTypes, forum.commercial,
+        forum.admin, forum.advertise, forum.scripts]);
+        return res.insertId;
+   } catch(e) {
+        return undefined;
+   }
+}
+
+
+//==============================================================================
+// Returns a list of all forums for display in the sysop forum manager. Fields
+// returned include `id`, `federation`, `name`, `sdesc`, and `admin`. Results
+// are sorted by federation name and then forum name.
+
+export async function forumsGet() { // FN: forumsGet
+    var q = "SELECT f.id, fed.name AS federation, f.name, sdesc, admin "
+        + "FROM forums f "
+        + "LEFT JOIN federations fed on fed.id = f.federationId "
+        + "ORDER BY fed.name, name";
+   var res = await mdb.exec(q);
+   return res;
+}
+
+
+//==============================================================================
+
+export async function forumUpdate(forum) { // FN: forumUpdate
+    var q = "UPDATE forums SET guid = ?, federationId = ?, name = ?, "
+        + "sdesc = ?, ldesc = ?, tos = ?, origin = ?, parent = ?, moderator = ?, "
+        + "maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
+        + "binaryTypes = ?, commercial = ?, admin = ?, advertise = ?, "
+        + "scripts = ? WHERE id = ?";
+   try {
+       var res = await mdb.exec(q, [forum.guid, forum.federationId, forum.name,
+        forum.sdesc, forum.ldesc, forum.tos, forum.origin, forum.parent,
+        forum.moderator, forum.maxSize, forum.binariesAttached,
+        forum.binariesEmbedded, forum.binaryTypes, forum.commercial,
+        forum.admin, forum.advertise, forum.scripts, forum.id ]);
+        return res.affectedRows;
+   } catch(e) {
+        return undefined;
+   }
+}
+
+
+
+//==============================================================================
 // Returns the first row from table where field = value, or undefined if nothing
 // was found. Obviously for cases where the field is a primary key candidate.
 

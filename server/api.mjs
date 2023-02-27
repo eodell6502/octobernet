@@ -66,14 +66,128 @@ export async function configSave(args) { // FN: configSave
 
 
 //==============================================================================
+// Retrieves a list of federations.
+
+export async function federationsGet(args) { // FN: federationsGet
+    var [args, user] = await prepArgs(args, {
+    }, "user");
+    if(args._errcode)
+        return args;
+
+    var federations = await $P.federationsGet();
+
+    return { federations: federations };
+}
+
+
+//==============================================================================
+// Retrieves a list of forums to display in the forum editor.
+
+export async function forumsGet(args) { // FN: forumsGet
+    var [args, user] = await prepArgs(args, {
+    }, "user");
+    if(args._errcode)
+        return args;
+
+    var forums = await $P.forumsGet();
+
+    return { forums: forums };
+}
+
+
+//==============================================================================
+// Retrieves an individual forum record for editing in the forum editor.
+
+export async function forumGet(args) { // FN: forumGet
+    var [args, user] = await prepArgs(args, {
+        forumId: { req: true, type: "uint", min: 1, max: Infinity },
+    }, "sysop");
+    if(args._errcode)
+        return args;
+
+    var forum = await $P.getRecord("forums", "id", args.forumId);
+    if(forum === undefined)
+        return { _errcode: "NOTFOUND", _errmsg: "Forum not found." };
+
+    return { forum: forum };
+}
+
+
+//==============================================================================
+
+export async function forumUpsert(args) { // FN: forumUpsert
+    var [args, user] = await prepArgs(args, {
+        id:               { req: true, type: "uint",   min: 0, max: Infinity },
+        guid:             { req: true, type: "string", min: 1, max: 64, trim: true },
+        federationId:     { req: true, type: "uint",   min: 1, max: Infinity, nullable: true },
+        name:             { req: true, type: "string", min: 1, max: 64, trim: true },
+        sdesc:            { req: true, type: "string", min: 1, max: 64, trim: true },
+        ldesc:            { req: true, type: "string", min: 1, max: 1024, trim: true },
+        tos:              { req: true, type: "string", min: 1, max: 65535, trim: true, nullable: true },
+        origin:           { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        parent:           { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        moderator:        { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        maxSize:          { req: true, type: "uint",   min: 1, max: Infinity },
+        binariesAttached: { req: true, type: "uint",   min: 0, max: 1 },
+        binariesEmbedded: { req: true, type: "uint",   min: 0, max: 1 },
+        binaryTypes:      { req: true, type: "string", trim: true },
+        commercial:       { req: true, type: "string", legal: ["none", "individual", "corporate" ] },
+        admin:            { req: true, type: "uint",   min: 0, max: 1 },
+        advertise:        { req: true, type: "uint",   min: 0, max: 1 },
+        scripts:          { req: true, type: "uint",   min: 0, max: 1 },
+        newForum:         { req: true, type: "uint",   min: 0, max: 1 },
+    }, "sysop");
+    if(args._errcode)
+        return args;
+
+    if(args.newForum) {
+        args.id = 0;
+        delete args.newForum;
+    }
+
+    if(await $P.forumIdentifierExists("guid", args.guid, args.id))
+        return { _errcode: "DUPGUID", _errmsg: "GUID \"" + args.guid + "\" is already in use." };
+
+    if(args.federationId !== null && await $P.federationExists(args.federationId) === false)
+        return { _errcode: "BADFEDID", _errmsg: "The supplied federation ID is not valid." };
+
+    if(args.id == 0) { // new forum
+        var forumId = await $P.forumNewCreate(args);
+        if(forumId === undefined)
+            return { _errcode: "SYSERR", _errmsg: "A database error has occurred." };
+        return { forumId: forumId };
+    } else {           // existing forum
+        var res = await $P.forumUpdate(args);
+        if(res === undefined)
+            return { _errcode: "SYSERR", _errmsg: "A database error has occurred." };
+        return { status: "OK" };
+    }
+
+}
+
+
+//==============================================================================
+// Returns a random SHA-224 hash.
+
+export async function guidGet() { // FN: guidGet
+     return { guid: $P.randomHash() };
+}
+
+
+
+//==============================================================================
 // Retrieves the full details of a host.
 
 export async function hostGet(args) { // FN: hostGet
     var [args, user] = await prepArgs(args, {
         hostId: { req: true, type: "uint", min: 1, max: Infinity },
     }, "user");
+    if(args._errcode)
+        return args;
 
     var host = await $P.getRecord("hosts", "id", args.hostId);
+    if(host === undefined)
+        return { _errcode: "NOTFOUND", _errmsg: "Host not found." };
 
     return { host: host };
 }
@@ -84,8 +198,9 @@ export async function hostGet(args) { // FN: hostGet
 
 export async function hostsGet(args) { // FN: hostsGet
     var [args, user] = await prepArgs(args, {
-        userId: { req: true, type: "uint", min: 1, max: Infinity },
     }, "user");
+    if(args._errcode)
+        return args;
 
     var hosts = await $P.hostsGet(["id", "name", "sdesc", "updated"], "name");
 
@@ -314,21 +429,28 @@ export async function usersGet(args) { // FN: usersGet
 
 
 //==============================================================================
-// Updates the user record with the corresponding id or, if id == 0, creates a
-// new user.
+// Updates the user record with the corresponding id or, if id == 0 or newUser
+// is true, creates a new user.
 
-export async function userUpsert(args) { // FN: userUpdate
+export async function userUpsert(args) { // FN: userUpsert
     var [args, user] = await prepArgs(args, {
-        id:             { req: true, type: "uint",   min: 0, max: Infinity },
-        username:       { req: true, type: "string", min: 1, max: 64, trim: true },
-        displayName:    { req: true, type: "string", min: 1, max: 64, trim: true },
-        email:          { req: true, type: "string", min: 1, max: 64, trim: true },
-        password:       { req: true, type: "string", min: 1, max: 64, nullable: true },
-        type:           { req: true, type: "string", legal: ["noob", "user", "sysop"] },
-        suspendedUntil: { req: true, type: "datetime", nullable: true },
-    }, true);
+        id:             { req: true,  type: "uint",   min: 0, max: Infinity },
+        username:       { req: true,  type: "string", min: 1, max: 64, trim: true },
+        displayName:    { req: true,  type: "string", min: 1, max: 64, trim: true },
+        email:          { req: true,  type: "string", min: 1, max: 64, trim: true },
+        password:       { req: true,  type: "string", min: 1, max: 64, nullable: true },
+        type:           { req: true,  type: "string", legal: ["noob", "user", "sysop"] },
+        suspendedUntil: { req: true,  type: "datetime", nullable: true },
+        newUser:        { req: false, type: "boolean" },
+    }, "sysop");
     if(args._errcode)
         return args;
+
+    if(args.newUser) {
+        args.id = 0;
+        delete args.newUser;
+    }
+
 
     // Check for collisions on username, displayName, and email. If id, exclude id.
 
@@ -346,11 +468,13 @@ export async function userUpsert(args) { // FN: userUpdate
         return { _errcode: "BADPASSWORD", _errmsg: errmsg };
     }
 
+    // Insert or update as needed
+
     if(args.id == 0) { // new user
         if(args.password === null)
-            return { _errcode: "BADPASSWORD", _errmsg: errmsg };
-        var userId = await $P.userNewCreate(args.username, args.email, shas224(args.password),
-            args.displayname, args.type);
+            return { _errcode: "BADPASSWORD", _errmsg: "Password must be specified." };
+        var userId = await $P.userNewCreate(args.username, args.email, sha224(args.password),
+            args.displayName, args.type);
         if(userId == -1)
             return { _errcode: "DUPUSER", _errmsg: "User already exists." };
         else
@@ -363,7 +487,6 @@ export async function userUpsert(args) { // FN: userUpdate
         } else {
             args.password = sha224(args.password);
         }
-        console.log("ARGS", args);
         var changed = await $P.updateRecordById("users", userId, args);
         if(changed === undefined)
             return { _errcode: "SYSERR", _errmsg: "Operation failed." };

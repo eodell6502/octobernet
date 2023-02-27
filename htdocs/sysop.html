@@ -11,16 +11,20 @@ body,table,input { font-family: Barlow; }
 div.shown  { display: block; }
 .hidden { display: none; }
 .formLabel { font-weight: 500; }
+.errorBox { color: #C30; padding-bottom: 6px;}
+.ctr { text-align: center; }
 
 table.gentable { border-spacing: 0px; white-space: nowrap; border: 1px solid black; }
 table.gentable thead { display: block; background-color: #4D4D4D; }
 table.gentable tbody { display: block; height: 500px; overflow-y: auto; overflow-x: hidden; }
-table.gentable th { color: white; font-weight: 500; }
-table.gentable td { padding-left: 0.5em; padding-right: 0.5em; }
-table.gentable th { padding-left: 0.5em; padding-right: 0.5em; }
+table.gentable th { color: white; font-weight: 500; padding-left: 0.5em; padding-right: 0.5em; vertical-align: top; }
+table.gentable td { padding-left: 0.5em; padding-right: 0.5em; vertical-align: top; }
 table.gentable tbody tr:nth-child(even) { background-color: #EEE; }
 
+table.genform td { vertical-align: top; }
+
 #umgrUserList td { cursor: pointer; }
+#fmgrForumList td { cursor: pointer; }
 
 </style>
 <script src="js/jquery-3.6.3.min.js"></script>
@@ -33,25 +37,33 @@ var pg = { // page global state
     umgr: {
         type: "all",
         users: null,
+    },
+    fmgr: {
+        forums: null,
     }
 };
 
 $(document).ready(function() {
-    $("#logoutLink").on("click", logout);
-    $("#usersLink").on("click", () => { xBlock("panel", "usersPanel"); });
-    $("#forumsLink").on("click", () => { xBlock("panel", "forumsPanel"); });
-    $("#hostsLink").on("click", () => { xBlock("panel", "hostsPanel"); });
+    $("#configGuid").on("click", () => { guidGet(document.configForm.bbsGuid); });
     $("#configLink").on("click", () => { xBlock("panel", "configPanel"); });
+    $("#configSubmit").on("click", () => { configSave(); });
+    $("#fmgrCancel").on("click", () => { document.forumEditForm.reset(); });
+    $("#fmgrGuid").on("click", () => { guidGet(document.forumEditForm.guid); });
+    $("#fmgrSave").on("click", () => { forumSave(); });
+    $("#forumsLink").on("click", () => { xBlock("panel", "forumsPanel"); tableAdjust("fmgrForumList"); });
+    $("#hostsLink").on("click", () => { xBlock("panel", "hostsPanel"); });
+    $("#logoutLink").on("click", logout);
     $("#newsreaderLink").on("click", () => { window.location = "newsreader.html"; });
+    $("#umgrCancel").on("click", () => { document.userEditForm.reset(); });
     $("#umgrFilter").on("change", function() { usersFilter(this.value); });
     $("#umgrRefresh").on("click", () => { usersLoad(); });
-    $("#umgrCancel").on("click", () => { document.userEditForm.reset(); });
     $("#umgrSave").on("click", () => { userSave(); });
-    $("#configSubmit").on("click", () => { configSave(); });
+    $("#usersLink").on("click", () => { xBlock("panel", "usersPanel"); });
 
     usersLoad();
     configLoad();
-    hostsLoad()
+    forumsLoad();
+    hostsLoad();
 });
 
 
@@ -70,6 +82,196 @@ async function logout() { // FN: logout
     localStorage.clear();
     window.location = "index.html";
 }
+
+
+//==============================================================================
+
+function tableAdjust(id) { // FN: tableAdjust
+    var $table = $("#" + id),
+        $bodyCells = $table.find('tbody tr:first').children(),
+        colWidth;
+    colWidth = $bodyCells.map(function() {
+        return $(this).width();
+    }).get();
+    $table.find('thead tr').children().each(function(i, v) {
+        $(v).width(colWidth[i]);
+    });
+}
+
+
+//==============================================================================
+
+async function guidGet(input) { // FN: guidGet
+    var g = new GQuery(apiUrl);
+    var res = await g.req("guidGet", { _loginToken: localStorage.loginToken } );
+    input.value = res.guid;
+}
+
+//==============================================================================
+
+async function forumsLoad() { // FN: forumsLoad
+    var g = new GQuery(apiUrl);
+    var res = await g.req("forumsGet", { _loginToken: localStorage.loginToken } );
+    pg.fmgr.forums = res.forums;
+    var rows = [ ];
+    for(var i = 0; i < res.forums.length; i++) {
+        var f = res.forums[i];
+        rows.push(
+            "<tr class=\"fline\" id=\"fl" + f.id + "\">"
+            + "<td>" + f.id + "</td>"
+            + "<td>" + (f.admin ? "admin" : "public") + "</td>"
+            + "<td>" + (f.federation ? f.federation : "local") + "</td>"
+            + "<td>" + f.name + "</td>"
+            + "<td>" + f.sdesc + "</td>"
+            + "</tr>"
+        );
+    }
+    $(".fline").off();
+    $("#fmgrListBody").html(rows.join("\n"));
+    $(".fline").on("click", function() {
+        forumLoad(parseInt(this.id.substr(2)));
+    });
+
+
+    $("#fmgrListBody").css("height", "400px");
+}
+
+
+//==============================================================================
+
+async function forumLoad(id) { // FN: forumLoad
+    var g = new GQuery(apiUrl);
+    var res = await g.req("forumGet", { _loginToken: localStorage.loginToken, forumId: id } );
+    if(res._errmsg) {
+        alert(res._errmsg);
+        return;
+    }
+    var f = res.forum;
+
+    var res = await g.req("federationsGet", { _loginToken: localStorage.loginToken } );
+    var fopts = [ "<option value='0'>local</option>" ];
+    for(var i = 0; i < res.length; i++)
+        fopts.push("<option value='" + res[i].id + "'>" + res[i].name + "</option>");
+    $("#fmgrFederation").html(fopts.join("\n"));
+
+    document.forumEditForm.reset();
+    document.forumEditForm.id.value = f.id;
+    document.forumEditForm.guid.value = f.guid;
+    document.forumEditForm.federation.value = f.federationId == null ? 0 : f.federationId;
+    document.forumEditForm.name.value = f.name;
+    document.forumEditForm.sdesc.value = f.sdesc;
+    document.forumEditForm.ldesc.value = f.ldesc;
+    document.forumEditForm.tos.value = f.tos;
+    document.forumEditForm.origin.value = f.origin;
+    document.forumEditForm.parent.value = f.parent;
+    document.forumEditForm.moderator.value = f.moderator;
+
+    var bodyTypes = f.bodyType.split(",");
+    document.forumEditForm.body_text.checked = (bodyTypes.indexOf("text") != -1);
+    document.forumEditForm.body_html.checked = (bodyTypes.indexOf("html") != -1);
+    document.forumEditForm.body_markdown.checked = (bodyTypes.indexOf("markdown") != -1);
+    document.forumEditForm.body_json.checked = (bodyTypes.indexOf("json") != -1);
+
+    document.forumEditForm.maxSize.value = f.maxSize;
+    document.forumEditForm.binariesAttached.checked = f.binariesAttached ? true : false;
+    document.forumEditForm.binariesEmbedded.checked = f.binariesEmbedded ? true : false;
+    document.forumEditForm.binaryTypes.value = f.binaryTypes;
+    document.forumEditForm.commercial.value = f.commercial;
+    document.forumEditForm.admin.checked = f.admin ? true : false;
+    document.forumEditForm.advertise.checked = f.advertise ? true : false;
+    document.forumEditForm.scripts.checked = f.scripts ? true : false;
+    document.forumEditForm.newForum.checked = false;
+}
+
+
+//==============================================================================
+
+async function forumSave() { // FN: forumSave
+    $("#forumError").html("");
+    var forum = {
+        id:               document.forumEditForm.id.value,
+        guid:             document.forumEditForm.guid.value.trim(),
+        federationId:     document.forumEditForm.federation.value,
+        name:             document.forumEditForm.name.value.trim(),
+        sdesc:            document.forumEditForm.sdesc.value.trim(),
+        ldesc:            document.forumEditForm.ldesc.value.trim(),
+        tos:              document.forumEditForm.tos.value.trim(),
+        origin:           document.forumEditForm.origin.value.trim(),
+        parent:           document.forumEditForm.parent.value.trim(),
+        moderator:        document.forumEditForm.moderator.value.trim(),
+        maxSize:          document.forumEditForm.maxSize.value.trim(),
+        binariesAttached: document.forumEditForm.binariesAttached.checked ? 1 : 0,
+        binariesEmbedded: document.forumEditForm.binariesEmbedded.checked ? 1 : 0,
+        binaryTypes:      document.forumEditForm.binaryTypes.value.trim(),
+        commercial:       document.forumEditForm.commercial.value,
+        admin:            document.forumEditForm.admin.checked ? 1 : 0,
+        advertise:        document.forumEditForm.advertise.checked ? 1 : 0,
+        scripts:          document.forumEditForm.scripts.checked ? 1 : 0,
+        newForum:         document.forumEditForm.newForum.checked ? 1 : 0,
+    };
+
+    if(forum.federationId == 0)
+        forum.federationId = null;
+
+    if(!forum.guid.length) {
+        $("#forumError").html("The forum GUID must be specified.");
+        return;
+    }
+    if(!forum.name.length) {
+        $("#forumError").html("The forum name must be specified.");
+        return;
+    }
+    if(!forum.sdesc.length) {
+        $("#forumError").html("The forum sdesc must be specified.");
+        return;
+    }
+    if(!forum.ldesc.length) {
+        $("#forumError").html("The forum ldesc must be specified.");
+        return;
+    }
+    if(!forum.tos.length)
+        forum.tos = null;
+    if(!forum.origin.length)
+        forum.origin = null;
+    if(!forum.parent.length)
+        forum.parent = null;
+    if(!forum.moderator.length)
+        forum.moderator = null;
+
+    var bodyType = [ ];
+    if(document.forumEditForm.body_text.checked)
+        bodyType.push("text");
+    if(document.forumEditForm.body_html.checked)
+        bodyType.push("html");
+    if(document.forumEditForm.body_markdown.checked)
+        bodyType.push("markdown");
+    if(document.forumEditForm.body_json.checked)
+        bodyType.push("json");
+    if(!bodyType.length) {
+        $("#forumError").html("At least one body type must be specified.");
+        return;
+    }
+    forum.bodyType = bodyType.join(",");
+
+    if(!forum.maxSize.length) {
+        $("#forumError").html("The forum max size must be specified.");
+        return;
+    }
+
+    var g = new GQuery(apiUrl);
+    forum._loginToken = localStorage.loginToken;
+    var res = await g.req("forumUpsert", forum );
+    if(res._errcode) {
+        $("#forumError").html(res._errmsg);
+        return;
+    }
+
+    document.forumEditForm.reset();
+    $("#forumError").html("");
+    await forumsLoad();
+
+}
+
 
 //==============================================================================
 
@@ -124,18 +326,7 @@ async function usersLoad() { // FN: usersLoad
     });
     usersFilter();
 
-    var $table = $("#umgrUserList"),
-        $bodyCells = $table.find('tbody tr:first').children(),
-        colWidth;
-    colWidth = $bodyCells.map(function() {
-        return $(this).width();
-    }).get();
-    $table.find('thead tr').children().each(function(i, v) {
-        $(v).width(colWidth[i]);
-    });
-
-    $("#umgrListBody").css("height", "400px");
-
+    tableAdjust("umgrUserList");
 }
 
 
@@ -171,7 +362,7 @@ async function userLoad(id) { // FN: userLoad
         document.userEditForm.lastActiveDate.value = "";
         document.userEditForm.lastActiveTime.value = "";
     }
-
+    document.userEditForm.newUser.checked = false;
 }
 
 //==============================================================================
@@ -186,6 +377,7 @@ async function userSave(id) { // FN: userSave
         password:       document.userEditForm.password.value,
         type:           document.userEditForm.type.value,
         suspendedUntil: datetimeAssemble(document.userEditForm.suspendedDate.value, document.userEditForm.suspendedTime.value),
+        newUser:        document.userEditForm.newUser.checked
     };
 
     if(!user.username.length) {
@@ -415,8 +607,6 @@ function datetimeFormat(dt) { // FN: datetimeFormat
 
 <!-- User Editor -->
 
-
-
 <div class="panel" id="usersPanel" style="margin-left: 30px;">
     <h2>User Manager</h2>
 
@@ -453,9 +643,9 @@ function datetimeFormat(dt) { // FN: datetimeFormat
 
                 <form name="userEditForm" id="userEditForm" onsubmit="return false;">
                     <input type="hidden" name="id">
-                    <table>
+                    <table class="genform">
                         <tr>
-                            <td colspan="2" id="userError"></td>
+                            <td colspan="2" id="userError" class="errorBox"></td>
                         </tr><tr>
                             <td class="formLabel">Username:</td>
                             <td><input type="text" name="username" size="20" maxlength="64"></td>
@@ -488,12 +678,15 @@ function datetimeFormat(dt) { // FN: datetimeFormat
                             <td class="formLabel">Last Active:</td>
                             <td><input type="date" name="lastActiveDate" readonly> <input type="time" name="lastActiveTime" readonly></td>
                         </tr><tr>
+                            <td class="formLabel">Save as New:</td>
+                            <td><input type="checkbox" name="newUser"></td>
+                        </tr><tr>
                             <td></td>
                             <td style="text-align: center;">
                                 <button id="umgrSave">Save</button>
                                 <button id="umgrCancel">Cancel</button>
                             </td>
-                        </tr><tr>
+                        </tr>
                     </table>
                 </form>
 
@@ -507,8 +700,119 @@ function datetimeFormat(dt) { // FN: datetimeFormat
 
 <!-- Forum Editor -->
 
-<div class="panel hidden" id="forumsPanel">
+<div class="panel hidden" id="forumsPanel" style="margin-left: 30px;">
     <h2>Forum Manager</h2>
+
+    <table id="forumEditor">
+        <tr>
+            <td style="vertical-align: top; padding-right: 2em;">
+
+                <table id="fmgrForumList" class="gentable" style="margin-top: 4px;">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Type</th>
+                            <th>Fed</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fmgrListBody">
+                    </tbody>
+                </table>
+
+            </td><td style="vertical-align: top; padding-right: 2em;">
+
+                <form name="forumEditForm" id="forumEditForm" onsubmit="return false;">
+                    <input type="hidden" name="id">
+                    <table class="genform">
+                         <tr>
+                            <td colspan="2" id="forumError" class="errorBox"></td>
+                        </tr><tr>
+                            <td class="formLabel">GUID:</td>
+                            <td>
+                                <input type="text" name="guid" size="20" maxlength="64">
+                                <button id="fmgrGuid">Generate</button>
+                            </td>
+                        </tr><tr>
+                            <td class="formLabel">Federation:</td>
+                            <td><select name="federation" id="fmgrFederation"></select></td>
+                        </tr><tr>
+                            <td class="formLabel">Name:</td>
+                            <td><input type="text" name="name" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">SDesc:</td>
+                            <td><input type="text" name="sdesc" size="40" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">LDesc:</td>
+                            <td><textarea name="ldesc"></textarea></td>
+                        </tr><tr>
+                            <td class="formLabel">TOS:</td>
+                            <td><textarea name="tos"></textarea></td>
+                        </tr><tr>
+                            <td class="formLabel">Origin:</td>
+                            <td><input type="text" name="origin" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Parent:</td>
+                            <td><input type="text" name="parent" size="20" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Moderator:</td>
+                            <td><input type="text" name="moderator" size="40" maxlength="64"></td>
+                        </tr><tr>
+                            <td class="formLabel">Body Type(s):</td>
+                            <td>
+                                <input type="checkbox" name="body_text"> Plain Text<br/>
+                                <input type="checkbox" name="body_html"> HTML<br/>
+                                <input type="checkbox" name="body_markdown"> Markdown<br/>
+                                <input type="checkbox" name="body_json"> JSON
+                            </td>
+                        </tr><tr>
+                            <td class="formLabel">Max Size:</td>
+                            <td><input type="text" name="maxSize" size="10" maxlength="20">
+                        </tr><tr>
+                            <td class="formLabel">Binaries Attached:</td>
+                            <td><input type="checkbox" name="binariesAttached"></td>
+                        </tr><tr>
+                            <td class="formLabel">Binaries Embedded:</td>
+                            <td><input type="checkbox" name="binariesEmbedded"></td>
+                        </tr><tr>
+                            <td class="formLabel">Binary Types:</td>
+                            <td><textarea name="binaryTypes"></textarea>
+                        </tr><tr>
+                            <td class="formLabel">Commercial:</td>
+                            <td>
+                                <select name="commercial">
+                                    <option value="none">none</option>
+                                    <option value="individual">individual</option>
+                                    <option value="corporate">corporate</option>
+                                </select>
+                            </td>
+                        </tr><tr>
+                            <td class="formLabel">Admin:</td>
+                            <td><input type="checkbox" name="admin"></td>
+                        </tr><tr>
+                            <td class="formLabel">Advertise:</td>
+                            <td><input type="checkbox" name="advertise"></td>
+                        </tr><tr>
+                            <td class="formLabel">Scripts:</td>
+                            <td><input type="checkbox" name="scripts"></td>
+                        </tr><tr>
+                            <td class="formLabel">Save as New:</td>
+                            <td><input type="checkbox" name="newForum"></td>
+                        </tr><tr>
+                            <td></td>
+                            <td style="text-align: center;">
+                                <button id="fmgrSave">Save</button>
+                                <button id="fmgrCancel">Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+
+            </td>
+        </tr>
+    </table>
+
 </div>
 
 <!-- Hosts Viewer -->
@@ -547,7 +851,10 @@ function datetimeFormat(dt) { // FN: datetimeFormat
                 <td><input type="text" name="bbsApiUrl" size="40" maxlength="128"></td>
             </tr><tr>
                 <td class="formLabel">bbsGuid:</td>
-                <td><input type="text" name="bbsGuid"   size="40" maxlength="64"></td>
+                <td>
+                    <input type="text" name="bbsGuid" size="40" maxlength="64">
+                    <button id="configGuid">Generate</button>
+                </td>
             </tr><tr>
                 <td class="formLabel">bbsLdesc:</td>
                 <td><textarea name="bbsLdesc"></textarea></td>
@@ -669,6 +976,22 @@ function datetimeFormat(dt) { // FN: datetimeFormat
 
 </div>
 
+<div id="modalBackground" class="modal">
+    <table id="modalDialog">
+        <tr><td id="modalContent"></td></tr>
+        <tr id="modalAlert">
+            <td class="ctr">
+                <button id="alertOkay">Okay</button>
+            </td>
+        <tr>
+        <tr id="modalConfirm">
+            <td class="ctr">
+                <button id="confirmYes">Yes</button>
+                <button id="confirmNo">No</button>
+            </td>
+        <tr>
+    </table>
+</div>
 
 </body>
 </html>

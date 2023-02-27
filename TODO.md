@@ -5,22 +5,29 @@ Phase I - Login Module/Account Self-Management
 
 Phase II - Sysop Tools
 
-    * User management       (core done)
-    * Configuration         (core done)
-    * Host viewer           (core done)
+    * MODAL DIALOG
+    * Host Viewer tidy
+    * User management
+        * Delete user
+    * Config
+        * Global retention policy
     * Forum management
-    * Tidying               (...)
+        * Delete forum
+        * Retention by time and by size, default to system
+    * Update internals.md
 
 Phase III - User Tools
 
     * Account management
     * Newsreader
-    * Proper graphic design
+
+Phase IV - Tender Process
 
     Once the basic BBS is functioning, we have a public beta release.
 
-Phase IV - Federations
+Phase V - Federations
 
+    * TBD
 
 Phase V - 2.0
 
