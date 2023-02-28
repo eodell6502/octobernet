@@ -210,6 +210,25 @@ export async function hostsGet(args) { // FN: hostsGet
 
 
 //==============================================================================
+// Marks the specified user deleted.
+
+export async function userDelete(args) { // FN: userDelete
+    var [args, user] = await prepArgs(args, {
+        userId: { req: true, type: "uint", min: 1, max: Infinity },
+    }, "sysop");
+    if(args._errcode)
+        return args;
+
+    if(args.userId == user.id)
+        return { _errcode: "SELFHARM", _errmsg: "You cannot delete yourself." };
+
+    await $P.userDelete(args.userId);
+
+    return { status: "OK" };
+}
+
+
+//==============================================================================
 // Retrieves a single user record for display in the user editor.
 
 export async function userGet(args) { // FN: userGet

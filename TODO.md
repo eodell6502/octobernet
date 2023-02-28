@@ -5,12 +5,9 @@ Phase I - Login Module/Account Self-Management
 
 Phase II - Sysop Tools
 
-    * Forum: body types saving bug
-    * Host Viewer tidy
-    * User management
-        * Delete user
     * Config
         * Global retention policy
+        * Cancel button
     * Forum management
         * Delete forum
         * Retention by time and by size, default to system

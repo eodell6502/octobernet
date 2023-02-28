@@ -59,6 +59,7 @@ $(document).ready(function() {
     $("#logoutLink").on("click", logout);
     $("#newsreaderLink").on("click", () => { window.location = "newsreader.html"; });
     $("#umgrCancel").on("click", () => { document.userEditForm.reset(); });
+    $("#umgrDelete").on("click", () => { userDeleteConfirm(); });
     $("#umgrFilter").on("change", function() { usersFilter(this.value); });
     $("#umgrRefresh").on("click", () => { usersLoad(); });
     $("#umgrSave").on("click", () => { userSave(); });
@@ -69,6 +70,37 @@ $(document).ready(function() {
     forumsLoad();
     hostsLoad();
 });
+
+
+//==============================================================================
+
+function userDeleteConfirm() { // FN: userDeleteConfirm
+    if(!document.userEditForm.id.value) {
+        modalDisplay("alert", "Before deleting a user, you must first load one "
+            + "by clicking on an entry in the user list.");
+        return;
+    } else {
+        modalDisplay("confirm", "Are you user you want to delete this user?",
+            userDeleteComplete);
+    }
+}
+
+
+//==============================================================================
+
+async function userDeleteComplete(confirm = false) { // FN: userDeleteComplete
+    if(confirm) {
+        var g = new GQuery(apiUrl);
+        var res = await g.req("userDelete", { _loginToken: localStorage.loginToken,
+            userId: document.userEditForm.id.value } );
+        if(res._errmsg) {
+            alert(res._errmsg);
+            return;
+        }
+        document.userEditForm.reset();
+        usersLoad();
+    }
+}
 
 
 //==============================================================================
@@ -579,13 +611,15 @@ async function hostsLoad() { // FN: hostsLoad
         rows.push("<tr host-id='" + host[i].id + "'>"
             + "<td>" + host[i].name + "</td>"
             + "<td>" + host[i].sdesc + "</td>"
-            + "<td>" + host[i].updated + "</td>"
+            + "<td>" + datetimeFormat(host[i].updated) + "</td>"
             + "</tr>");
-    $("#hostListBody tr").off();
-    $("#hostListBody").html(rows.join("\n"));
-    $("#hostListBody tr").on("click", function() {
+    $("#hmgrListBody tr").off();
+    $("#hmgrListBody").html(rows.join("\n"));
+    $("#hmgrListBody tr").on("click", function() {
         hostLoad($(this).attr("host-id"));
     });
+
+    tableAdjust("hmgrHostList");
 }
 
 
@@ -600,16 +634,16 @@ async function hostLoad(id) { // FN: hostLoad
     }
 
     var host = res.host;
-    $("#hostViewBody").html("<tr><th>Name:</th><td>" + host.name + "</td></tr>"
-        + "<tr><th>Sdesc:</th><td>" + host.sdesc + "</td></tr>"
-        + "<tr><th>Ldesc:</th><td>" + host.ldesc + "</td></tr>"
-        + "<tr><th>GUID:</th><td>" + host.guid + "</td></tr>"
-        + "<tr><th>Sysop:</th><td>" + host.sysopName + "</td></tr>"
-        + "<tr><th>Sysop Email:</th><td>" + host.sysopEmail + "</td></tr>"
-        + "<tr><th>Public URL:</th><td>" + host.publicUrl + "</td></tr>"
-        + "<tr><th>API URL:</th><td>" + host.apiUrl + "</td></tr>"
-        + "<tr><th>UTC Offset:</th><td>" + host.utcOffset + "</td></tr>"
-        + "<tr><th>Updated:</th><td>" + host.updated + "</td></tr>");
+    $("#hostViewBody").html("<tr><td class='formLabel'>Name:</td><td>" + host.name + "</td></tr>"
+        + "<tr><td class='formLabel'>Sdesc:</td><td>" + host.sdesc + "</td></tr>"
+        + "<tr><td class='formLabel'>Ldesc:</td><td>" + host.ldesc + "</td></tr>"
+        + "<tr><td class='formLabel'>GUID:</td><td>" + host.guid + "</td></tr>"
+        + "<tr><td class='formLabel'>Sysop:</td><td>" + host.sysopName + "</td></tr>"
+        + "<tr><td class='formLabel'>Sysop Email:</td><td>" + host.sysopEmail + "</td></tr>"
+        + "<tr><td class='formLabel'>Public URL:</td><td>" + host.publicUrl + "</td></tr>"
+        + "<tr><td class='formLabel'>API URL:</td><td>" + host.apiUrl + "</td></tr>"
+        + "<tr><td class='formLabel'>UTC Offset:</td><td>" + host.utcOffset + "</td></tr>"
+        + "<tr><td class='formLabel'>Updated:</td><td>" + host.updated + "</td></tr>");
 }
 
 //==============================================================================
@@ -726,6 +760,7 @@ function datetimeFormat(dt) { // FN: datetimeFormat
                             <td style="text-align: center;">
                                 <button id="umgrSave">Save</button>
                                 <button id="umgrCancel">Cancel</button>
+                                <button id="umgrDelete" style="margin-left: 3em;">Delete User</button>
                             </td>
                         </tr>
                     </table>
@@ -858,24 +893,34 @@ function datetimeFormat(dt) { // FN: datetimeFormat
 
 <!-- Hosts Viewer -->
 
-<div class="panel hidden" id="hostsPanel">
+<div class="panel hidden" id="hostsPanel" style="margin-left: 30px;">
     <h2>Hosts Viewer</h2>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Updated</th>
-            </tr>
-        </thead>
-        <tbody id="hostListBody">
-        </tbody>
-    </table>
+    <table id="hostsViewer">
+        <tr>
+            <td style="vertical-align: top; padding-right: 2em">
 
-    <table>
-        <tbody id="hostViewBody">
-        </tbody>
+                <table id="hmgrHostList" class="gentable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hmgrListBody">
+                    </tbody>
+                </table>
+
+            </td><td style="vertical-align: top;">
+
+                <table class="genform">
+                    <tbody id="hostViewBody">
+                    </tbody>
+                </table>
+
+            </td>
+        </tr>
     </table>
 
 </div>

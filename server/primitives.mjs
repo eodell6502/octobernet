@@ -404,6 +404,17 @@ export async function userActivityUpdate(userId) { // FN: userActivityUpdate
 
 
 //==============================================================================
+// Deletes the specified user. At present, this is just marking the record as
+// deleted.
+
+export async function userDelete(userId) { // FN: userDelete
+    var q = "UPDATE users SET deleted = NOW() WHERE id = ?";
+    await mdb.exec(q, [userId]);
+    return;
+}
+
+
+//==============================================================================
 // Returns a boolean indicating whether the supplied user identifier --
 // "username", "email", or "displayName" -- already exists. If a user ID is
 // passed, that account will be ignored.
