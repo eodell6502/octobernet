@@ -127,6 +127,7 @@ export async function forumUpsert(args) { // FN: forumUpsert
         origin:           { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
         parent:           { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
         moderator:        { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        bodyType:         { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
         maxSize:          { req: true, type: "uint",   min: 1, max: Infinity },
         binariesAttached: { req: true, type: "uint",   min: 0, max: 1 },
         binariesEmbedded: { req: true, type: "uint",   min: 0, max: 1 },

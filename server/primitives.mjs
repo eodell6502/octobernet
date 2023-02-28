@@ -138,13 +138,13 @@ if(["guid"].indexOf(identifier) == -1)
 export async function forumNewCreate(forum) { // FN: forumNewCreate
     var q = "INSERT INTO forums SET guid = ?, federationId = ?, name = ?, "
         + "sdesc = ?, ldesc = ?, tos = ?, origin = ?, parent = ?, moderator = ?, "
-        + "maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
+        + "bodyType = ?, maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
         + "binaryTypes = ?, commercial = ?, admin = ?, advertise = ?, "
         + "scripts = ?";
    try {
        var res = await mdb.exec(q, [forum.guid, forum.federationId, forum.name,
         forum.sdesc, forum.ldesc, forum.tos, forum.origin, forum.parent,
-        forum.moderator, forum.maxSize, forum.binariesAttached,
+        forum.moderator, forum.bodyType, forum.maxSize, forum.binariesAttached,
         forum.binariesEmbedded, forum.binaryTypes, forum.commercial,
         forum.admin, forum.advertise, forum.scripts]);
         return res.insertId;
@@ -174,13 +174,13 @@ export async function forumsGet() { // FN: forumsGet
 export async function forumUpdate(forum) { // FN: forumUpdate
     var q = "UPDATE forums SET guid = ?, federationId = ?, name = ?, "
         + "sdesc = ?, ldesc = ?, tos = ?, origin = ?, parent = ?, moderator = ?, "
-        + "maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
+        + "bodyType = ?, maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
         + "binaryTypes = ?, commercial = ?, admin = ?, advertise = ?, "
         + "scripts = ? WHERE id = ?";
    try {
        var res = await mdb.exec(q, [forum.guid, forum.federationId, forum.name,
         forum.sdesc, forum.ldesc, forum.tos, forum.origin, forum.parent,
-        forum.moderator, forum.maxSize, forum.binariesAttached,
+        forum.moderator, forum.bodyType, forum.maxSize, forum.binariesAttached,
         forum.binariesEmbedded, forum.binaryTypes, forum.commercial,
         forum.admin, forum.advertise, forum.scripts, forum.id ]);
         return res.affectedRows;

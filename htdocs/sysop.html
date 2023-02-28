@@ -291,6 +291,8 @@ async function forumSave() { // FN: forumSave
         return;
     }
     forum.bodyType = bodyType.join(",");
+    if(!forum.bodyType.length)
+        forum.bodyType = null;
 
     if(!forum.maxSize.length) {
         $("#forumError").html("The forum max size must be specified.");
