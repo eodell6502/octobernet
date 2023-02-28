@@ -5,7 +5,7 @@ Phase I - Login Module/Account Self-Management
 
 Phase II - Sysop Tools
 
-    * MODAL DIALOG
+    * Forum: body types saving bug
     * Host Viewer tidy
     * User management
         * Delete user
