@@ -5,12 +5,6 @@ Phase I - Login Module/Account Self-Management
 
 Phase II - Sysop Tools
 
-    * Config
-        * Global retention policy
-        * Cancel button
-    * Forum management
-        * Delete forum
-        * Retention by time and by size, default to system
     * Update internals.md
 
 Phase III - User Tools
@@ -29,6 +23,7 @@ Phase V - Federations
 Phase V - 2.0
 
     * More automation
+    * Sysop analytics
     * PostgreSQL backend option
     * ZeroMQ option
 

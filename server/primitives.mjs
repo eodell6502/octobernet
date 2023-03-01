@@ -114,6 +114,17 @@ export async function federationsGet() { // FN: federationsGet
 
 
 //==============================================================================
+// Deletes the specified forum. At the moment, this is just the forum record,
+// but soon it will include messages and other data associated with it.
+
+export async function forumDelete(forumId) { // FN: forumDelete
+    var q = "DELETE FROM forums WHERE id = ?";
+    await mdb.exec(q, [forumId]);
+    return;
+}
+
+
+//==============================================================================
 // Returns a boolean indicating whether the supplied identifier --- currently,
 // "guid" is the only option --- already exists. If a forum ID is passed, that
 // record will be ignored.
@@ -138,13 +149,15 @@ if(["guid"].indexOf(identifier) == -1)
 export async function forumNewCreate(forum) { // FN: forumNewCreate
     var q = "INSERT INTO forums SET guid = ?, federationId = ?, name = ?, "
         + "sdesc = ?, ldesc = ?, tos = ?, origin = ?, parent = ?, moderator = ?, "
-        + "bodyType = ?, maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
+        + "bodyType = ?, maxMessageSize = ?, maxMessageAge = ?, "
+        + "maxMessagebaseSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
         + "binaryTypes = ?, commercial = ?, admin = ?, advertise = ?, "
         + "scripts = ?";
    try {
        var res = await mdb.exec(q, [forum.guid, forum.federationId, forum.name,
         forum.sdesc, forum.ldesc, forum.tos, forum.origin, forum.parent,
-        forum.moderator, forum.bodyType, forum.maxSize, forum.binariesAttached,
+        forum.moderator, forum.bodyType, forum.maxMessageSize,
+        forum.maxMessageAge, forum.maxMessagebaseSize, forum.binariesAttached,
         forum.binariesEmbedded, forum.binaryTypes, forum.commercial,
         forum.admin, forum.advertise, forum.scripts]);
         return res.insertId;
@@ -174,15 +187,17 @@ export async function forumsGet() { // FN: forumsGet
 export async function forumUpdate(forum) { // FN: forumUpdate
     var q = "UPDATE forums SET guid = ?, federationId = ?, name = ?, "
         + "sdesc = ?, ldesc = ?, tos = ?, origin = ?, parent = ?, moderator = ?, "
-        + "bodyType = ?, maxSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
+        + "bodyType = ?, maxMessageSize = ?, maxMessageAge = ?, "
+        + "maxMessagebaseSize = ?, binariesAttached = ?, binariesEmbedded = ?, "
         + "binaryTypes = ?, commercial = ?, admin = ?, advertise = ?, "
         + "scripts = ? WHERE id = ?";
    try {
        var res = await mdb.exec(q, [forum.guid, forum.federationId, forum.name,
         forum.sdesc, forum.ldesc, forum.tos, forum.origin, forum.parent,
-        forum.moderator, forum.bodyType, forum.maxSize, forum.binariesAttached,
-        forum.binariesEmbedded, forum.binaryTypes, forum.commercial,
-        forum.admin, forum.advertise, forum.scripts, forum.id ]);
+        forum.moderator, forum.bodyType, forum.maxMessageSize, forum.maxMessageAge,
+        forum.maxMessagebaseSize, forum.binariesAttached, forum.binariesEmbedded,
+        forum.binaryTypes, forum.commercial, forum.admin, forum.advertise,
+        forum.scripts, forum.id ]);
         return res.affectedRows;
    } catch(e) {
         return undefined;

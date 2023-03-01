@@ -41,6 +41,8 @@ export async function configSave(args) { // FN: configSave
         maxFieldSize:         { req: true, type: "uint", min: 1, max: Infinity },
         maxFileCount:         { req: true, type: "uint", min: 1, max: Infinity },
         maxFileSize:          { req: true, type: "uint", min: 1, max: Infinity },
+        maxMessageAge:        { req: true, type: "uint", min: 1, max: Infinity },
+        maxMessagebaseSize:   { req: true, type: "uint", min: 1, max: Infinity },
         port:                 { req: true, type: "uint", min: 0, max: 65535 },
         pwdHasLowercase:      { req: true, type: "boolean" },
         pwdHasNumbers:        { req: true, type: "boolean" },
@@ -81,6 +83,23 @@ export async function federationsGet(args) { // FN: federationsGet
 
 
 //==============================================================================
+// Deletes the specified forum. In the future, it will delete all associated
+// records as well.
+
+export async function forumDelete(args) { // FN: forumDelete
+    var [args, user] = await prepArgs(args, {
+        forumId: { req: true, type: "uint", min: 1, max: Infinity },
+    }, "sysop");
+    if(args._errcode)
+        return args;
+
+    await $P.forumDelete(args.forumId);
+
+    return { status: "OK" };
+}
+
+
+//==============================================================================
 // Retrieves a list of forums to display in the forum editor.
 
 export async function forumsGet(args) { // FN: forumsGet
@@ -117,26 +136,28 @@ export async function forumGet(args) { // FN: forumGet
 
 export async function forumUpsert(args) { // FN: forumUpsert
     var [args, user] = await prepArgs(args, {
-        id:               { req: true, type: "uint",   min: 0, max: Infinity },
-        guid:             { req: true, type: "string", min: 1, max: 64, trim: true },
-        federationId:     { req: true, type: "uint",   min: 1, max: Infinity, nullable: true },
-        name:             { req: true, type: "string", min: 1, max: 64, trim: true },
-        sdesc:            { req: true, type: "string", min: 1, max: 64, trim: true },
-        ldesc:            { req: true, type: "string", min: 1, max: 1024, trim: true },
-        tos:              { req: true, type: "string", min: 1, max: 65535, trim: true, nullable: true },
-        origin:           { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
-        parent:           { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
-        moderator:        { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
-        bodyType:         { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
-        maxSize:          { req: true, type: "uint",   min: 1, max: Infinity },
-        binariesAttached: { req: true, type: "uint",   min: 0, max: 1 },
-        binariesEmbedded: { req: true, type: "uint",   min: 0, max: 1 },
-        binaryTypes:      { req: true, type: "string", trim: true },
-        commercial:       { req: true, type: "string", legal: ["none", "individual", "corporate" ] },
-        admin:            { req: true, type: "uint",   min: 0, max: 1 },
-        advertise:        { req: true, type: "uint",   min: 0, max: 1 },
-        scripts:          { req: true, type: "uint",   min: 0, max: 1 },
-        newForum:         { req: true, type: "uint",   min: 0, max: 1 },
+        id:                 { req: true, type: "uint",   min: 0, max: Infinity },
+        guid:               { req: true, type: "string", min: 1, max: 64, trim: true },
+        federationId:       { req: true, type: "uint",   min: 1, max: Infinity, nullable: true },
+        name:               { req: true, type: "string", min: 1, max: 64, trim: true },
+        sdesc:              { req: true, type: "string", min: 1, max: 64, trim: true },
+        ldesc:              { req: true, type: "string", min: 1, max: 1024, trim: true },
+        tos:                { req: true, type: "string", min: 1, max: 65535, trim: true, nullable: true },
+        origin:             { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        parent:             { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        moderator:          { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        bodyType:           { req: true, type: "string", min: 1, max: 64, trim: true, nullable: true },
+        maxMessageSize:     { req: true, type: "uint",   min: 0, max: Infinity },
+        maxMessageAge:      { req: true, type: "uint",   min: 0, max: Infinity },
+        maxMessagebaseSize: { req: true, type: "uint",   min: 0, max: Infinity },
+        binariesAttached:   { req: true, type: "uint",   min: 0, max: 1 },
+        binariesEmbedded:   { req: true, type: "uint",   min: 0, max: 1 },
+        binaryTypes:        { req: true, type: "string", trim: true },
+        commercial:         { req: true, type: "string", legal: ["none", "individual", "corporate" ] },
+        admin:              { req: true, type: "uint",   min: 0, max: 1 },
+        advertise:          { req: true, type: "uint",   min: 0, max: 1 },
+        scripts:            { req: true, type: "uint",   min: 0, max: 1 },
+        newForum:           { req: true, type: "uint",   min: 0, max: 1 },
     }, "sysop");
     if(args._errcode)
         return args;

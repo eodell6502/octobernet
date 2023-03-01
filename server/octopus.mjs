@@ -142,35 +142,35 @@ async function mktbl(switches) {
 
     await mdb.exec("DROP TABLE forums");
     var q = "CREATE TABLE `forums` ( "
-       + "`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, "
-       + "`guid` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`federationId` INT(10) UNSIGNED NULL DEFAULT NULL, "
-       + "`name` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`sdesc` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`ldesc` VARCHAR(1024) NOT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`tos` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`origin` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`parent` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`moderator` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`bodyType` SET('html','text','markdown','json') NOT NULL DEFAULT 'html' COLLATE 'utf8mb4_general_ci', "
-       + "`maxSize` INT(10) UNSIGNED NOT NULL DEFAULT '65536', "
-       + "`binariesAttached` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
-       + "`binariesEmbedded` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
-       + "`binaryTypes` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
-       + "`commercial` ENUM('none','individual','corporate') NOT NULL DEFAULT 'none' COLLATE 'utf8mb4_general_ci', "
-       + "`admin` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
-       + "`advertise` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
-       + "`scripts` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
-       + "PRIMARY KEY (`id`) USING BTREE, "
-       + "UNIQUE INDEX `guid` (`guid`) USING BTREE, "
-       + "INDEX `name` (`name`) USING BTREE, "
-       + "INDEX `origin` (`origin`) USING BTREE, "
-       + "INDEX `parent` (`parent`) USING BTREE, "
-       + "INDEX `moderator` (`moderator`) USING BTREE "
-       + ") "
-       + "COLLATE='utf8mb4_general_ci' "
-       + "ENGINE=InnoDB "
-       + ";";
+	    + "`id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT, "
+	    + "`guid` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`federationId` INT(10) UNSIGNED NULL DEFAULT NULL, "
+	    + "`name` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`sdesc` VARCHAR(64) NOT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`ldesc` VARCHAR(1024) NOT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`tos` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`origin` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`parent` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`moderator` VARCHAR(64) NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`bodyType` SET('html','text','markdown','json') NOT NULL DEFAULT 'html' COLLATE 'utf8mb4_general_ci', "
+	    + "`maxMessageSize` INT(10) UNSIGNED NOT NULL DEFAULT '65536', "
+	    + "`maxMessageAge` INT(10) UNSIGNED NOT NULL DEFAULT '65536', "
+	    + "`maxMessagebaseSize` INT(10) UNSIGNED NOT NULL DEFAULT '65536', "
+	    + "`binariesAttached` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
+	    + "`binariesEmbedded` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
+	    + "`binaryTypes` TEXT NULL DEFAULT NULL COLLATE 'utf8mb4_general_ci', "
+	    + "`commercial` ENUM('none','individual','corporate') NOT NULL DEFAULT 'none' COLLATE 'utf8mb4_general_ci', "
+	    + "`admin` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
+	    + "`advertise` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
+	    + "`scripts` TINYINT(3) UNSIGNED NOT NULL DEFAULT '0', "
+	    + "PRIMARY KEY (`id`) USING BTREE, "
+	    + "UNIQUE INDEX `guid` (`guid`) USING BTREE, "
+	    + "INDEX `name` (`name`) USING BTREE, "
+	    + "INDEX `origin` (`origin`) USING BTREE, "
+	    + "INDEX `parent` (`parent`) USING BTREE, "
+	    + "INDEX `moderator` (`moderator`) USING BTREE "
+        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
+
     await mdb.exec(q);
 
     await mdb.exec("DROP TABLE hosts");
@@ -265,36 +265,38 @@ async function mktbl(switches) {
     await mdb.exec(q);
 
     var defaultConfig = {
-        sessionLifetime:      { type: "integer", val: 60 * 24, sdesc: "Login session lifetime in minutes." },
-        verificationLifetime: { type: "integer", val: 60 * 24, sdesc: "Verification token lifetime in minutes." },
-        port:                 { type: "integer", val: 8080, sdesc: "Port for the Octoberon API." },
+        bbsApiUrl:            { type: "string",  val: "https://somedomain.net/api", sdesc: "The URL of your API." },
+        bbsGuid:              { type: "string",  val: "...", sdesc: "A unique identifier for your BBS." },
+        bbsLdesc:             { type: "string",  val: "An arbitrarily long description.", sdesc: "TODO: What's the max length?" },
+        bbsName:              { type: "string",  val: "Your BBS Name", sdesc: "The name of your BBS." },
+        bbsPrivateKey:        { type: "string",  val: "...", sdesc: "..." },
+        bbsPublicKey:         { type: "string",  val: "...", sdesc: "..." },
+        bbsPublicUrl:         { type: "string",  val: "https://somedomain.net/bbs", sdesc: "The URL of your login page." },
+        bbsSdesc:             { type: "string",  val: "A very short description.", sdesc: "Up to 80 characters." },
+        bbsUtcOffset:         { type: "integer", val: -6, sdesc: "Your offset from UTC." }, // TODO: timezone dropdown?
+        emailAutoAddress:     { type: "string", val: "sysop@mydomain.com", sdesc: "Origin address for auto email." },
+        emailHost:            { type: "string", val: "mail.mydomain.com", sdesc: "Domain name or address of email server." },
+        emailPassword:        { type: "string", val: "secret", sdesc: "Password for email account." },
+        emailPort:            { type: "integer", val: 465, sdesc: "Port for email server." },
+        emailSecure:          { type: "boolean", val: "true", sdesc: "TODO: check Nodemailer docs." },
+        emailUsername:        { type: "string", val: "mailsysop", sdesc: "Username for email account." },
         mainUrl:              { type: "string",  val: "http://192.168.1.140/", sdesc: "URL of the login page." },
         maxFieldCount:        { type: "integer", val: 32, sdesc: "Maximum fields allowed in API call." },
         maxFieldSize:         { type: "integer", val: 128000000, sdesc: "Maximum size of an API field in bytes." },
         maxFileCount:         { type: "integer", val: 64, sdesc: "Maximum number of files per API call." },
         maxFileSize:          { type: "integer", val: 128000000, sdesc: "Maximum uploaded file size in bytes." },
-        pwdMinLength:         { type: "integer", val: 8, sdesc: "Minimum length of passwords." },
+        maxMessageAge:        { type: "integer", val: 30, sdesc: "Message retention period in days." },
+        maxMessagebaseSize:   { type: "integer", val: 2000000000, sdesc: "Maximum size of messagebase in bytes." },
+        port:                 { type: "integer", val: 8080, sdesc: "Port for the Octoberon API." },
         pwdHasLowercase:      { type: "boolean", val: "true", sdesc: "Require lowercase characters in passwords." },
-        pwdHasUppercase:      { type: "boolean", val: "true", sdesc: "Require uppercase characters in passwords." },
         pwdHasNumbers:        { type: "boolean", val: "true", sdesc: "Require numbers in passwords." },
         pwdHasSpecialChars:   { type: "boolean", val: "true", sdesc: "Require non-alphanumeric characters in passwords." },
-        bbsName:              { type: "string",  val: "Your BBS Name", sdesc: "The name of your BBS." },
-        bbsGuid:              { type: "string",  val: "...", sdesc: "A unique identifier for your BBS." },
-        bbsSdesc:             { type: "string",  val: "A very short description.", sdesc: "Up to 80 characters." },
-        bbsLdesc:             { type: "string",  val: "An arbitrarily long description.", sdesc: "TODO: What's the max length?" },
-        bbsPublicUrl:         { type: "string",  val: "https://somedomain.net/bbs", sdesc: "The URL of your login page." },
-        bbsApiUrl:            { type: "string",  val: "https://somedomain.net/api", sdesc: "The URL of your API." },
-        bbsPrivateKey:        { type: "string",  val: "...", sdesc: "..." },
-        bbsPublicKey:         { type: "string",  val: "...", sdesc: "..." },
-        bbsUtcOffset:         { type: "integer", val: -6, sdesc: "Your offset from UTC." }, // TODO: timezone dropdown?
-        sysopName:            { type: "string",  val: "Jane Doe", sdesc: "Your name (or pseudonym)." },
+        pwdHasUppercase:      { type: "boolean", val: "true", sdesc: "Require uppercase characters in passwords." },
+        pwdMinLength:         { type: "integer", val: 8, sdesc: "Minimum length of passwords." },
+        sessionLifetime:      { type: "integer", val: 60 * 24, sdesc: "Login session lifetime in minutes." },
         sysopEmail:           { type: "string",  val: "jdoe@somedomain.net", sdesc: "Your email address." },
-        emailAutoAddress:     { type: "string", val: "sysop@mydomain.com", sdesc: "Origin address for auto email." },
-        emailHost:            { type: "string", val: "mail.mydomain.com", sdesc: "Domain name or address of email server." },
-        emailPort:            { type: "integer", val: 465, sdesc: "Port for email server." },
-        emailSecure:          { type: "boolean", val: "true", sdesc: "TODO: check Nodemailer docs." },
-        emailUsername:        { type: "string", val: "mailsysop", sdesc: "Username for email account." },
-        emailPassword:        { type: "string", val: "secret", sdesc: "Password for email account." },
+        sysopName:            { type: "string",  val: "Jane Doe", sdesc: "Your name (or pseudonym)." },
+        verificationLifetime: { type: "integer", val: 60 * 24, sdesc: "Verification token lifetime in minutes." },
     };
 
     var q = "INSERT INTO `config` (`name`, `type`, `val`, `sdesc`) VALUES(?, ?, ?, ?)";

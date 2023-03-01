@@ -48,10 +48,12 @@ var pg = { // page global state
 };
 
 $(document).ready(function() {
+    $("#configCancel").on("click", () => { configLoad(); });
     $("#configGuid").on("click", () => { guidGet(document.configForm.bbsGuid); });
     $("#configLink").on("click", () => { xBlock("panel", "configPanel"); });
     $("#configSubmit").on("click", () => { configSave(); });
-    $("#fmgrCancel").on("click", () => { document.forumEditForm.reset(); });
+    $("#fmgrCancel").on("click", () => { document.forumEditForm.reset(); document.forumEditForm.id.value = ""; });
+    $("#fmgrDelete").on("click", () => { forumDeleteConfirm(); });
     $("#fmgrGuid").on("click", () => { guidGet(document.forumEditForm.guid); });
     $("#fmgrSave").on("click", () => { forumSave(); });
     $("#forumsLink").on("click", () => { xBlock("panel", "forumsPanel"); tableAdjust("fmgrForumList"); });
@@ -74,13 +76,45 @@ $(document).ready(function() {
 
 //==============================================================================
 
+function forumDeleteConfirm() { // FN: forumDeleteConfirm
+    if(!document.forumEditForm.id.value) {
+        modalDisplay("alert", "Before deleting a forum, you must first load one "
+            + "by clicking on an entry in the forum list.");
+        return;
+    } else {
+        modalDisplay("confirm", "Are you sure you want to delete this forum?",
+            forumDeleteComplete);
+    }
+}
+
+
+//==============================================================================
+
+async function forumDeleteComplete(confirm = false) { // FN: forumDeleteComplete
+    if(confirm) {
+        var g = new GQuery(apiUrl);
+        var res = await g.req("forumDelete", { _loginToken: localStorage.loginToken,
+            forumId: document.forumEditForm.id.value } );
+        if(res._errmsg) {
+            alert(res._errmsg);
+            return;
+        }
+        document.forumEditForm.reset();
+        document.forumEditForm.id.value = "";
+        forumsLoad();
+    }
+}
+
+
+//==============================================================================
+
 function userDeleteConfirm() { // FN: userDeleteConfirm
     if(!document.userEditForm.id.value) {
         modalDisplay("alert", "Before deleting a user, you must first load one "
             + "by clicking on an entry in the user list.");
         return;
     } else {
-        modalDisplay("confirm", "Are you user you want to delete this user?",
+        modalDisplay("confirm", "Are you sure you want to delete this user?",
             userDeleteComplete);
     }
 }
@@ -243,7 +277,9 @@ async function forumLoad(id) { // FN: forumLoad
     document.forumEditForm.body_markdown.checked = (bodyTypes.indexOf("markdown") != -1);
     document.forumEditForm.body_json.checked = (bodyTypes.indexOf("json") != -1);
 
-    document.forumEditForm.maxSize.value = f.maxSize;
+    document.forumEditForm.maxMessageSize.value = f.maxMessageSize;
+    document.forumEditForm.maxMessageAge.value = f.maxMessageAge;
+    document.forumEditForm.maxMessagebaseSize.value = f.maxMessagebaseSize;
     document.forumEditForm.binariesAttached.checked = f.binariesAttached ? true : false;
     document.forumEditForm.binariesEmbedded.checked = f.binariesEmbedded ? true : false;
     document.forumEditForm.binaryTypes.value = f.binaryTypes;
@@ -260,25 +296,27 @@ async function forumLoad(id) { // FN: forumLoad
 async function forumSave() { // FN: forumSave
     $("#forumError").html("");
     var forum = {
-        id:               document.forumEditForm.id.value,
-        guid:             document.forumEditForm.guid.value.trim(),
-        federationId:     document.forumEditForm.federation.value,
-        name:             document.forumEditForm.name.value.trim(),
-        sdesc:            document.forumEditForm.sdesc.value.trim(),
-        ldesc:            document.forumEditForm.ldesc.value.trim(),
-        tos:              document.forumEditForm.tos.value.trim(),
-        origin:           document.forumEditForm.origin.value.trim(),
-        parent:           document.forumEditForm.parent.value.trim(),
-        moderator:        document.forumEditForm.moderator.value.trim(),
-        maxSize:          document.forumEditForm.maxSize.value.trim(),
-        binariesAttached: document.forumEditForm.binariesAttached.checked ? 1 : 0,
-        binariesEmbedded: document.forumEditForm.binariesEmbedded.checked ? 1 : 0,
-        binaryTypes:      document.forumEditForm.binaryTypes.value.trim(),
-        commercial:       document.forumEditForm.commercial.value,
-        admin:            document.forumEditForm.admin.checked ? 1 : 0,
-        advertise:        document.forumEditForm.advertise.checked ? 1 : 0,
-        scripts:          document.forumEditForm.scripts.checked ? 1 : 0,
-        newForum:         document.forumEditForm.newForum.checked ? 1 : 0,
+        id:                 document.forumEditForm.id.value,
+        guid:               document.forumEditForm.guid.value.trim(),
+        federationId:       document.forumEditForm.federation.value,
+        name:               document.forumEditForm.name.value.trim(),
+        sdesc:              document.forumEditForm.sdesc.value.trim(),
+        ldesc:              document.forumEditForm.ldesc.value.trim(),
+        tos:                document.forumEditForm.tos.value.trim(),
+        origin:             document.forumEditForm.origin.value.trim(),
+        parent:             document.forumEditForm.parent.value.trim(),
+        moderator:          document.forumEditForm.moderator.value.trim(),
+        maxMessageSize:     document.forumEditForm.maxMessageSize.value.trim(),
+        maxMessageAge:      document.forumEditForm.maxMessageAge.value.trim(),
+        maxMessagebaseSize: document.forumEditForm.maxMessagebaseSize.value.trim(),
+        binariesAttached:   document.forumEditForm.binariesAttached.checked ? 1 : 0,
+        binariesEmbedded:   document.forumEditForm.binariesEmbedded.checked ? 1 : 0,
+        binaryTypes:        document.forumEditForm.binaryTypes.value.trim(),
+        commercial:         document.forumEditForm.commercial.value,
+        admin:              document.forumEditForm.admin.checked ? 1 : 0,
+        advertise:          document.forumEditForm.advertise.checked ? 1 : 0,
+        scripts:            document.forumEditForm.scripts.checked ? 1 : 0,
+        newForum:           document.forumEditForm.newForum.checked ? 1 : 0,
     };
 
     if(forum.federationId == 0)
@@ -326,8 +364,16 @@ async function forumSave() { // FN: forumSave
     if(!forum.bodyType.length)
         forum.bodyType = null;
 
-    if(!forum.maxSize.length) {
-        $("#forumError").html("The forum max size must be specified.");
+    if(!forum.maxMessageSize.length) {
+        $("#forumError").html("The forum max message size must be specified.");
+        return;
+    }
+    if(!forum.maxMessageAge.length) {
+        $("#forumError").html("The forum max message age must be specified.");
+        return;
+    }
+    if(!forum.maxMessagebaseSize.length) {
+        $("#forumError").html("The forum max messagebase size must be specified.");
         return;
     }
 
@@ -529,9 +575,9 @@ async function configSave() { // FN: configSave
         "bbsPublicKey", "bbsPublicUrl", "bbsSdesc", "bbsUtcOffset",
         "emailAutoAddress", "emailHost", "emailPassword", "emailPort",
         "emailUsername", "mainUrl", "maxFieldCount",
-        "maxFieldSize", "maxFileCount", "maxFileSize", "port",
-        "pwdMinLength", "sessionLifetime", "sysopEmail",
-        "sysopName", "verificationLifetime",
+        "maxFieldSize", "maxFileCount", "maxFileSize", "maxMessageAge",
+        "maxMessagebaseSize", "port", "pwdMinLength", "sessionLifetime",
+        "sysopEmail", "sysopName", "verificationLifetime",
     ];
     var args = { _loginToken: localStorage.loginToken };
     for(var f of fields)
@@ -583,6 +629,8 @@ async function configLoad() { // FN: configLoad
     document.configForm.maxFieldSize.value = res.maxFieldSize;
     document.configForm.maxFileCount.value = res.maxFileCount;
     document.configForm.maxFileSize.value = res.maxFileSize;
+    document.configForm.maxMessageAge.value = res.maxMessageAge;
+    document.configForm.maxMessagebaseSize.value = res.maxMessagebaseSize;
     document.configForm.port.value = res.port;
     document.configForm.pwdHasLowercase.checked = res.pwdHasLowercase;
     document.configForm.pwdHasNumbers.checked = res.pwdHasNumbers;
@@ -843,8 +891,14 @@ function datetimeFormat(dt) { // FN: datetimeFormat
                                 <input type="checkbox" name="body_json"> JSON
                             </td>
                         </tr><tr>
-                            <td class="formLabel">Max Size:</td>
-                            <td><input type="text" name="maxSize" size="10" maxlength="20">
+                            <td class="formLabel">Max Message Size:</td>
+                            <td><input type="text" name="maxMessageSize" size="10" maxlength="20">
+                        </tr><tr>
+                            <td class="formLabel">Max Message Age:</td>
+                            <td><input type="text" name="maxMessageAge" size="20" maxlength="20"></td>
+                        </tr><tr>
+                            <td class="formLabel">Max Messagebase Size:</td>
+                            <td><input type="text" name="maxMessagebaseSize" size="20" maxlength="20"></td>
                         </tr><tr>
                             <td class="formLabel">Binaries Attached:</td>
                             <td><input type="checkbox" name="binariesAttached"></td>
@@ -880,6 +934,7 @@ function datetimeFormat(dt) { // FN: datetimeFormat
                             <td style="text-align: center;">
                                 <button id="fmgrSave">Save</button>
                                 <button id="fmgrCancel">Cancel</button>
+                                <button id="fmgrDelete" style="margin-left: 3em;">Delete Forum</button>
                             </td>
                         </tr>
                     </table>
@@ -1024,6 +1079,12 @@ function datetimeFormat(dt) { // FN: datetimeFormat
                 <td class="formLabel">maxFileSize:</td>
                 <td><input type="text" name="maxFileSize" size="20" maxlength="20"></td>
             </tr><tr>
+                <td class="formLabel">maxMessageAge:</td>
+                <td><input type="text" name="maxMessageAge" size="20" maxlength="20"></td>
+            </tr><tr>
+                <td class="formLabel">maxMessagebaseSize:</td>
+                <td><input type="text" name="maxMessagebaseSize" size="20" maxlength="20"></td>
+            </tr><tr>
                 <td class="formLabel">port:</td>
                 <td><input type="text" name="port" size="5" maxlength="5"></td>
             </tr><tr>
@@ -1055,7 +1116,10 @@ function datetimeFormat(dt) { // FN: datetimeFormat
                 <td><input type="text" name="verificationLifetime" size="20" maxlength="20"></td>
             </tr><tr>
                 <td></td>
-                <td><button id="configSubmit">Save</button:</td>
+                <td style="text-align: center;">
+                    <button id="configSubmit">Save</button>
+                    <button id="configCancel">Cancel</button>
+                </td>
             </tr>
         </table>
     </form>
