@@ -5,7 +5,7 @@ Phase I - Login Module/Account Self-Management
 
 Phase II - Sysop Tools
 
-    * Update internals.md
+    (initial work complete)
 
 Phase III - User Tools
 

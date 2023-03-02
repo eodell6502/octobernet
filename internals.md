@@ -69,6 +69,81 @@ Writes the config object back to the database. Sysops only.
 
 --------------------------------------------------------------------------------
 
+### `federationsGet`
+
+Returns a list of federations.
+
+**Arguments:** none
+
+**Returns:**
+
+```javascript
+{
+    federations: [
+        { id: 1, name: "OctoberNet" },
+        // ...
+    ]
+}
+```
+
+--------------------------------------------------------------------------------
+
+### `forumDelete`
+
+Deletes the specified forum along with all associated records.
+
+**Arguments:**
+
+| name    | status   | description                                                   |
+|---------|----------|---------------------------------------------------------------|
+| forumId | required | Integer
+
+**Returns:** `{status: "OK" }`
+
+--------------------------------------------------------------------------------
+
+### `forumGet`
+
+Retrieves an individual forum record.
+
+**Arguments:**
+
+| name    | status   | description                                                   |
+|---------|----------|---------------------------------------------------------------|
+| forumId | required | Integer
+
+**Returns:**
+
+```javascript
+{
+    forum: {
+        id: 1,
+        guid: "forumguid1",
+        federationId: null,
+        name: "local.talk.generic",
+        sdesc: "This is a generic talk forum",
+        ldesc: "This could be up to 1024 characters.",
+        tos: "This could go on forever.",
+        origin: null,
+        parent: null,
+        moderator: null,
+        bodyType: "html,text,markdown",
+        maxMessageSize: 128000,
+        maxMessageAge: 25,
+        maxMessagebaseSize: 0,
+        binariesAttached: 1,
+        binariesEmbedded: 1,
+        binaryTypes: "TBD",
+        commercial: "none",
+        admin: 0,
+        advertise: 0,
+        scripts: 0
+    }
+}
+```
+
+--------------------------------------------------------------------------------
+
 ### `forumsGet`
 
 Retrieves a list of forums to display in the forum editor.
@@ -94,15 +169,128 @@ Retrieves a list of forums to display in the forum editor.
 
 --------------------------------------------------------------------------------
 
+### `forumUpsert`
+
+Updates or inserts a forum record. If `newForum == 1`, then `id` is ignored and
+a new record is created. Otherwise, an update is performed.
+
+**Arguments:**
+
+| name                 | status   | description                                                   |
+|----------------------|----------|---------------------------------------------------------------|
+| `id`                 | required | Integer
+| `guid`               | required | String, 1-64 chars
+| `federationId`       | required | String, or `null`
+| `name`               | required | String, 1-64 chars
+| `sdesc`              | required | String, 1-64 chars
+| `ldesc`              | required | String, 1-1024 chars
+| `tos`                | required | String, 1-64 chars, or `null`
+| `origin`             | required | String, 1-64 chars, or `null`
+| `parent`             | required | String, 1-64 chars, or `null`
+| `moderator`          | required | String, 1-64 chars, or `null`
+| `bodyType`           | required | SET with values `"text"`, `"html"`, `"markdown"`, and `"json"`
+| `maxMessageSize`     | required | Integer, max individual message size in bytes
+| `maxMessageAge`      | required | Integer, max message age in days, `0` to disable
+| `maxMessagebaseSize` | required | Integer, max size of total forum messages, `0` to disable
+| `binariesAttached`   | required | Integer, 0-1
+| `binariesEmbedded`   | required | Integer, 0-1
+| `binaryTypes`        | required | ...
+| `commercial`         | required | One of `"none"`, `"individual"`, `"corporate"`
+| `admin`              | required | Integer, 0-1
+| `advertise`          | required | Integer, 0-1
+| `scripts`            | required | Integer, 0-1
+| `newForum`           | required | Integer, 0-1
+
+**Returns:**
+
+```javascript
+{ forumId: 174 }  // if insert
+{ status: "OK" }  // if update
+```
+
+--------------------------------------------------------------------------------
+
+### `guidGet`
+
+Returns a new random SHA-224 hash.
+
+**Arguments:** none
+
+**Returns:** `{ guid: "89121b18c9801a8d90f0ad" }`
+
+
+--------------------------------------------------------------------------------
+
 ### `hostGet`
 
-TODO
+Returns the full details of a host.
+
+**Arguments:**
+
+| name         | status   | description                                                   |
+|--------------|----------|---------------------------------------------------------------|
+| `hostId`     | required | Integer
+
+**Returns:**
+
+```javascript
+{
+    host: {
+        id: 1,
+        guid: "BLAHBLAHBLAH",
+        name: "The Other Host",
+        sdesc: "This is the other host",
+        ldesc: "This is a longer description of the other host.",
+        publicUrl: "https://theotherhost.com",
+        apiUrl: "https://theotherhost.com:8080",
+        sysopName: "Other Sysop",
+        sysopEmail: "sysop@theotherhost.com",
+        publicKey: "HNARFHNARF",
+        utcOffset: -4,
+        updated: "2023-03-01T02:53:26.000Z"
+    }
+}
+```
 
 --------------------------------------------------------------------------------
 
 ### `hostsGet`
 
-TODO
+Retrieves a list of hosts to display in the hosts viewer.
+
+**Arguments:** none
+
+**Returns:**
+
+```javascript
+{
+    hosts: [
+        {
+            id: 1,
+            name: "The Other Host",
+            sdesc: "This is the other host",
+            updated: "2023-03-01T02:53:26.000Z"
+        },
+        // ...
+    ]
+}
+```
+
+--------------------------------------------------------------------------------
+
+### `userDelete`
+
+Marks the specified user deleted. This will not allow the current user to delete
+themself.
+
+**Arguments:**
+
+| name         | status   | description                                                   |
+|--------------|----------|---------------------------------------------------------------|
+| userId       | required | Integer
+
+**Returns:** ``{ status: "OK" }``
+
 
 --------------------------------------------------------------------------------
 
@@ -296,7 +484,7 @@ type.
 ### `userUpsert`
 
 Updates the user record with the corresponding id or, if id == 0 or newUser
-is true, creates a new user.
+is `true`, creates a new user.
 
 **Arguments:**
 
@@ -380,6 +568,25 @@ Writes a key-value pair to the `config` table.
 
 --------------------------------------------------------------------------------
 
+### `async function federationExists(id)`
+
+Returns a boolean indicating whether the specified fedeation ID is valid.
+
+--------------------------------------------------------------------------------
+
+### `async function federationsGet()`
+
+Returns a list of all federations.
+
+--------------------------------------------------------------------------------
+
+### `async function forumDelete(forumId)`
+
+Deletes the specified forum. At the moment, this is just the forum record,
+but soon it will include messages and other data associated with it.
+
+--------------------------------------------------------------------------------
+
 ### `async function forumsGet()`
 
 Returns a list of all forums for display in the sysop forum manager. Fields
@@ -388,11 +595,45 @@ sorted by federation name and then forum name.
 
 --------------------------------------------------------------------------------
 
+### `async function forumIdentifierExists(identifier, value, forumId = 0)`
+
+Returns a boolean indicating whether the supplied identifier --- currently,
+`"guid"` is the only option --- already exists. If a forum ID is passed, that
+record will be ignored.
+
+--------------------------------------------------------------------------------
+
+### `async function forumNewCreate(forum)`
+
+Creates a new forum from an object containing the forum's values.
+
+--------------------------------------------------------------------------------
+
+### `async function forumsGet()`
+
+Returns a list of all forums for display in the sysop forum manager. Fields
+returned include `id`, `federation`, `name`, `sdesc`, and `admin`. Results
+are sorted by federation name and then forum name.
+
+--------------------------------------------------------------------------------
+
+### `async function forumUpdate(forum)`
+
+Updates a forum from an object containing the forum's values.
+
+--------------------------------------------------------------------------------
+
 ### `async function getRecord(table, field, value)`
 
 Returns the first row from `table` where `field == value`, or `undefined` if
 nothing was found. Obviously for cases where the field is contains unique
 values.
+
+--------------------------------------------------------------------------------
+
+### `async function hostsGet(fields, orderBy)`
+
+Retrieves the fields in the `fields` array, sorted by the field in `orderBy`.
 
 --------------------------------------------------------------------------------
 
@@ -463,6 +704,13 @@ Updates the record with `id == id` in `table` using the column/value pairs in
 ### `async function userActivityUpdate(userId)`
 
 Updates the lastActive field for the specified user.
+
+--------------------------------------------------------------------------------
+
+### `async function userDelete(userId)`
+
+Deletes the specified user. At present, this is just marking the record as
+deleted.
 
 --------------------------------------------------------------------------------
 
